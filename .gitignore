@@ -1,0 +1,19 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+
+# Environment files
+.env
+.venv/
+
+# Logs
+*.log
+
+# Dependencies
+bptf/
+
+# Other folders
+cache/
+
+# Other files
+comparing_3_datasets_2015_2019.pdf
