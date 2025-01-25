@@ -17,3 +17,6 @@ cache/
 
 # Other files
 comparing_3_datasets_2015_2019.pdf
+
+# Cache files
+sptensor.pkl
