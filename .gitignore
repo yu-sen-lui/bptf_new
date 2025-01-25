@@ -20,3 +20,5 @@ comparing_3_datasets_2015_2019.pdf
 
 # Cache files
 sptensor.pkl
+bptf_5mode.pkl
+nntf_parafac_5mode.pkl
