@@ -22,3 +22,8 @@ comparing_3_datasets_2015_2019.pdf
 sptensor.pkl
 bptf_5mode.pkl
 nntf_parafac_5mode.pkl
+bptf_5mode_50iter.pkl
+
+# Log files
+output.log
+model_output.log
