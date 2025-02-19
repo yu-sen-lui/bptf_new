@@ -43,15 +43,31 @@ with open('sptensor.pkl', 'rb') as f:
 gc.collect()
 n_components = 100
 
-if os.path.exists('bptf_5mode_100iter.pkl'):
-    with open('bptf_5mode_100iter.pkl', 'rb') as f:
+# We need to mask the country-country diagonals as self actions are not included
+I_range = np.arange(Y.shape[0])
+A_range = np.arange(Y.shape[2])
+T_range = np.arange(Y.shape[3])
+D_range = np.arange(Y.shape[4])
+
+I, A, T, D = np.meshgrid(I_range, A_range, T_range, D_range, indexing='ij')
+I_flattened = np.ravel(I)
+A_flattened = np.ravel(A)
+T_flattened = np.ravel(T)
+D_flattened = np.ravel(D)
+
+mask_coords = np.vstack([I_flattened, I_flattened, A_flattened, T_flattened, D_flattened])
+mask = sparse.COO(coords=mask_coords, data=np.ones(shape = mask_coords.shape[1]), shape=Y.shape)
+
+# if os.path.exists('bptf_5mode_50iter.pkl'):
+if False:
+    with open('bptf_5mode_50iter.pkl', 'rb') as f:
         bptf_5mode = pickle.load(f)
     print('File exists')
 else:
     bptf_5mode = BPTF(data_shape=Y.shape, n_components=n_components)
-    bptf_5mode.fit(Y, max_iter = 100, verbose=True)
+    bptf_5mode.fit(Y, max_iter = 50, mask=mask,verbose=True)
     print('Fitting with BPTF')
-    with open('bptf_5mode_100iter.pkl', 'wb') as f:
+    with open('bptf_5mode_50iter.pkl', 'wb') as f:
         pickle.dump(bptf_5mode, f)
 
 # check the shapes
