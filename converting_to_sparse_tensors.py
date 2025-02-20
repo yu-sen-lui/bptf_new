@@ -34,7 +34,9 @@ import gc
 gc.collect()
 
 # Global variables and settings ===================================================================
-parallel = False
+parallel = True
+if parallel:
+    print(multiprocessing.cpu_count())
 
 def dataframe_to_sparse_tensor(data, country_indices, date_indices, database_indices, cameo_col='CAMEO_Code', events_col='Num_Events'):
     """
@@ -118,18 +120,26 @@ def sum_sparse_tensor_list(tensor_list):
 
 ## Get data =======================================================================================
 # read files by batch
-folder = "/dyadic_data_2000_2020_inclusive/"
+# folder = "/dyadic_data_2000_2020_inclusive/"
+folder = "/icews_gdelt_terrier/"
 data_filepath = os.getcwd() + folder
 files = os.listdir(data_filepath)
-for filepath in tqdm(files, desc = 'Reading data'):
-    complete_filepath = data_filepath + filepath
-    file = pd.read_csv(complete_filepath)
-    if filepath == files[0]:
-        data = file
-    else:
-        data = pd.concat([data, file])
-    del file
-data = data.sort_values(by='Num_Events', ascending=False)
+if parallel:
+    files = Parallel(n_jobs=multiprocessing.cpu_count())(
+        delayed(pd.read_csv)(data_filepath + filepath)
+        for filepath in tqdm(files, desc = 'Reading data')
+    )
+    data = pd.concat(files)
+else:
+    for filepath in tqdm(files, desc = 'Reading data'):
+        complete_filepath = data_filepath + filepath
+        file = pd.read_csv(complete_filepath)
+        if filepath == files[0]:
+            data = file
+        else:
+            data = pd.concat([data, file])
+        del file
+    data = data.sort_values(by='Num_Events', ascending=False)
 
 # get GDELT data from GDELT database to replace gdelt in original data
 gdelt_filepaths = [os.path.join('GDELT', f) for f in os.listdir('GDELT')]
@@ -172,7 +182,7 @@ gc.collect()
 
 # filter by date to get a smaller dataset to play around with
 # The common years across all 3 datasets is 2000 - 2018
-years = [str(2000 + x) for x in range(0, 19)]
+years = [str(2000 + x) for x in range(0, 25)]
 data = data[data['formatteddate'].str.startswith(tuple(years))]
 
 # collapse by month
@@ -212,6 +222,7 @@ database_indices = pd.DataFrame({
     'database' : databases,
     'index' : range(len(databases))
 })
+print(database_indices)
 del databases
 
 # Convert dataframes to sparse tensors
@@ -244,39 +255,3 @@ else:
     # Save the sptensor object to a file
     with open('sptensor.pkl', 'wb') as f:
         pickle.dump(Y, f)
-
-# Tensor factorisation ============================================================================
-# decompose the tensor using Poisson CP decomposition
-gc.collect()
-n_components = 100
-
-if os.path.exists('bptf_5mode.pkl'):
-    with open('bptf_5mode.pkl', 'rb') as f:
-        bptf_5mode = pickle.load(f)
-else:
-    bptf_5mode = BPTF(data_shape=Y.shape, n_components=n_components)
-    bptf_5mode.fit(Y, max_iter = 100, verbose=True)
-    
-    with open('bptf_5mode.pkl', 'wb') as f:
-        pickle.dump(bptf_5mode, f)
-
-# check the shapes
-for j in range(len(Y.shape)):
-    assert bptf_5mode.G_DK_M[j].shape == (Y.shape[j], n_components)
-
-# Tensor factorisation with deterministic method ==================================================
-if os.path.exists('nntf_parafac_5mode.pkl'):
-    with open('nntf_parafac_5mode.pkl', 'rb') as f:
-        tensor_mu = pickle.load(f)
-else:
-    cp_init = tensorly.cp_tensor.CPTensor(
-        tensorly.decomposition._cp.initialize_cp(
-            Y, non_negative = True, init = 'random', rank = n_components
-            )
-        )
-    tensor_mu, _ = tensorly.decomposition.non_negative_parafac(
-        Y, rank=n_components, init=cp_init, return_errors=True
-        )
-    
-    with open('nntf_parafac_5mode.pkl', 'wb') as f:
-        pickle.dump(tensor_mu, f)
