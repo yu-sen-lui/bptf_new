@@ -185,6 +185,11 @@ gc.collect()
 years = [str(2000 + x) for x in range(0, 25)]
 data = data[data['formatteddate'].str.startswith(tuple(years))]
 
+# drop rows with NaN in them
+print("Rows before dropna:", data.shape[0])
+data = data.dropna()
+print("Rows after dropna:", data.shape[0])
+
 # collapse by month
 data['formatteddate'] = data['formatteddate'].str[:7]
 data = data.groupby(['Source_Country_Code', 'Target_Country_Code', 'CAMEO_Code', 'formatteddate', 'Database'])
@@ -227,9 +232,11 @@ del databases
 
 # Convert dataframes to sparse tensors
 if os.path.exists('sptensor.pkl'):
+    print('sparse tensor exists')
     with open('sptensor.pkl', 'rb') as f:
         Y = pickle.load(f)
 else:
+    print('converting to sparse tensor')
     n_batches = 10000
     n = 10
 
