@@ -136,19 +136,19 @@ del bptf_5mode
 gc.collect()
 
 # Tensor factorisation with deterministic method ==================================================
-filepath = 'nntf_parafac_5mode_2000_2018.pkl'
-if os.path.exists(filepath):
-    print('File exists')
-else:
-    print('Fitting with deterministic algorithm')
-    cp_init = tensorly.cp_tensor.CPTensor(
-        tensorly.decomposition._cp.initialize_cp(
-            Y_2000_2018, non_negative = True, init = 'random', rank = n_components
-            )
-        )
-    tensor_mu, _ = tensorly.decomposition.non_negative_parafac(
-        Y, rank=n_components, init=cp_init, return_errors=True
-        )
+# filepath = 'nntf_parafac_5mode_2000_2018.pkl'
+# if os.path.exists(filepath):
+#     print('File exists')
+# else:
+#     print('Fitting with deterministic algorithm')
+#     cp_init = tensorly.cp_tensor.CPTensor(
+#         tensorly.decomposition._cp.initialize_cp(
+#             Y_2000_2018, non_negative = True, init = 'random', rank = n_components
+#             )
+#         )
+#     tensor_mu, _ = tensorly.decomposition.non_negative_parafac(
+#         Y, rank=n_components, init=cp_init, return_errors=True
+#         )
     
-    with open(filepath, 'wb') as f:
-        pickle.dump(tensor_mu, f)
+#     with open(filepath, 'wb') as f:
+#         pickle.dump(tensor_mu, f)
