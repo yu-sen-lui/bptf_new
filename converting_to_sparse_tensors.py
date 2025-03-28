@@ -130,6 +130,7 @@ if parallel:
         for filepath in tqdm(files, desc = 'Reading data')
     )
     data = pd.concat(files)
+    data = data.sort_values(by='Num_Events', ascending=False)
 else:
     data = [pd.read_csv(data_filepath + filepath) for filepath in tqdm(files, desc = 'Reading data')]
     data = pd.concat(data)
