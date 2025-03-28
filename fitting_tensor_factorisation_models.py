@@ -148,7 +148,7 @@ else:
             )
         )
     tensor_mu, _ = tensorly.decomposition.non_negative_parafac(
-        Y, rank=n_components, init=cp_init, return_errors=True
+        Y_2000_2018, rank=n_components, init=cp_init, return_errors=True
         )
     
     with open(filepath, 'wb') as f:
