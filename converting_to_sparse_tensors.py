@@ -131,14 +131,8 @@ if parallel:
     )
     data = pd.concat(files)
 else:
-    for filepath in tqdm(files, desc = 'Reading data'):
-        complete_filepath = data_filepath + filepath
-        file = pd.read_csv(complete_filepath)
-        if filepath == files[0]:
-            data = file
-        else:
-            data = pd.concat([data, file])
-        del file
+    data = [pd.read_csv(data_filepath + filepath) for filepath in tqdm(files, desc = 'Reading data')]
+    data = pd.concat(data)
     data = data.sort_values(by='Num_Events', ascending=False)
 
 # get GDELT data from GDELT database to replace gdelt in original data

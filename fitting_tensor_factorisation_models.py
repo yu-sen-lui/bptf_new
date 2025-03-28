@@ -60,13 +60,14 @@ new_data = Y.data[mask].copy()
 Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
 n_components = 100
+max_iter = 100
 # fitting without mask, just doing an inner join of all 3 datasets
 Y_2000_2018 = Y[:, :, :, :(12*(2019-2000)), :]
 bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components)
 filepath = 'bptf_5mode_50iter_2000_2018.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
-    bptf_5mode.fit(Y_2000_2018, max_iter = 50, mask=None,verbose=True)
+    bptf_5mode.fit(Y_2000_2018, max_iter = max_iter, mask=None,verbose=False)
     with open(filepath, 'wb') as f:
         pickle.dump(bptf_5mode, f)
 else:
@@ -120,7 +121,7 @@ bptf_5mode = BPTF(data_shape=Y.shape, n_components=n_components)
 filepath = 'bptf_5mode_50iter_2000_2024.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
-    bptf_5mode.fit(Y, max_iter = 50, mask=Y_mask,verbose=True)
+    bptf_5mode.fit(Y, max_iter = max_iter, mask=Y_mask,verbose=False)
     with open(filepath, 'wb') as f:
         pickle.dump(bptf_5mode, f)
 else:
@@ -136,19 +137,19 @@ del bptf_5mode
 gc.collect()
 
 # Tensor factorisation with deterministic method ==================================================
-# filepath = 'nntf_parafac_5mode_2000_2018.pkl'
-# if os.path.exists(filepath):
-#     print('File exists')
-# else:
-#     print('Fitting with deterministic algorithm')
-#     cp_init = tensorly.cp_tensor.CPTensor(
-#         tensorly.decomposition._cp.initialize_cp(
-#             Y_2000_2018, non_negative = True, init = 'random', rank = n_components
-#             )
-#         )
-#     tensor_mu, _ = tensorly.decomposition.non_negative_parafac(
-#         Y, rank=n_components, init=cp_init, return_errors=True
-#         )
+filepath = 'nntf_parafac_5mode_2000_2018.pkl'
+if os.path.exists(filepath):
+    print('File exists')
+else:
+    print('Fitting with deterministic algorithm')
+    cp_init = tensorly.cp_tensor.CPTensor(
+        tensorly.decomposition._cp.initialize_cp(
+            Y_2000_2018, non_negative = True, init = 'random', rank = n_components
+            )
+        )
+    tensor_mu, _ = tensorly.decomposition.non_negative_parafac(
+        Y, rank=n_components, init=cp_init, return_errors=True
+        )
     
-#     with open(filepath, 'wb') as f:
-#         pickle.dump(tensor_mu, f)
+    with open(filepath, 'wb') as f:
+        pickle.dump(tensor_mu, f)
