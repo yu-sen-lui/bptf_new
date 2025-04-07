@@ -51,7 +51,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         assert style in ['arithmetic', 'geometric'], "Wrong style"
         
         factors = self.G_DK_M if style == 'geometric' else self.E_DK_M
-        Y_recon = tl.cp_tensor.cp_to_tensor(cp_tensor=(torch.ones(self.K, factors)))
+        Y_recon = tl.cp_tensor.cp_to_tensor(cp_tensor=(torch.ones(self.K, device=self.device), factors))
 
         # fill in mask with fill_value because they are not observed
         if mask is not None:
@@ -74,6 +74,8 @@ class BPTF(BaseEstimator, TransformerMixin):
         Prior rate hyperparameter
         Args:
             m: int. mth mode of the tensor
+        Returns:
+            instance objects listed above
         """
         # default initial shape and rate for initialising variational parameters
         shp = kwargs.get("init_shp", 100.); rte = kwargs.get("init_rte", 1.)
@@ -125,5 +127,9 @@ class BPTF(BaseEstimator, TransformerMixin):
         Also updates the variational surrogate distribution statistics
         Args:
             m: mth mode of the data tensor
-            
+            data: data tensor, torch tensor with same device as self.device
         """
+        if mask == None:
+            mask = torch.ones(self.data_shape, device=self.device)
+        
+        denominator = tl.cp_tensor.cp_to_tensor(cp_tensor=())
