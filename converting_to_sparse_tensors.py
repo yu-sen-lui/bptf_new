@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import torch
 import tensorly
 import cupy
+import gdelt
 
 import multiprocessing
 from joblib import Parallel, delayed
@@ -118,61 +119,100 @@ def sum_sparse_tensor_list(tensor_list):
     
     return result_tensor
 
+def process_date(date):
+    """
+    Queries the GDELT database and returns all events with a complete token (i.e. source, target country, action and time) by day.
+    GDELT 2 only supports 2015 02 18 and onwards.
+    Args:
+        date: string. YYYY MM DD
+    Returns:
+        pandas dataframe with source, target country codes, action and day
+    """
+    try:
+        ver = 1 if int(date[:4]) <= 2016 else 2
+        gd = gdelt.gdelt(version=ver)
+        results = gd.Search([date],table='events',coverage=True)
+        results = results[['Actor1CountryCode', 'Actor2CountryCode', 'EventBaseCode', 'SQLDATE', 'NumMentions']]
+        results.loc[:, 'EventBaseCode'] = results['EventBaseCode'].str[:2]
+        results = results.dropna()
+        # results = results.groupby(['Actor1CountryCode', 'Actor2CountryCode', 'EventBaseCode', 'SQLDATE'])
+        # results = results.sum().reset_index()
+        results = results[results['EventBaseCode'].str.isnumeric()]
+
+        # print(f"Processed: {date} - {len(results)} rows")
+        return results
+    except Exception as e:
+        print(f'Failed to process {date}: {e}')
+        return pd.DataFrame(columns=['Actor1CountryCode', 'Actor2CountryCode', 'EventBaseCode', 'SQLDATE', 'NumMentions'])
+
 ## Get data =======================================================================================
 # read files by batch
 # folder = "/dyadic_data_2000_2020_inclusive/"
 folder = "/icews_gdelt_terrier/"
 data_filepath = os.getcwd() + folder
 files = os.listdir(data_filepath)
-if parallel:
-    files = Parallel(n_jobs=multiprocessing.cpu_count())(
-        delayed(pd.read_csv)(data_filepath + filepath)
-        for filepath in tqdm(files, desc = 'Reading data')
-    )
-    data = pd.concat(files)
-    data = data.sort_values(by='Num_Events', ascending=False)
+data = [pd.read_csv(data_filepath + filepath) for filepath in tqdm(files, desc = 'Reading data')]
+data = pd.concat(data)
+data = data.sort_values(by='Num_Events', ascending=False)
+
+# # get GDELT data from GDELT database to replace gdelt in original data
+# gdelt_filepaths = [os.path.join('GDELT', f) for f in os.listdir('GDELT')]
+# # gdelt = [pd.read_csv(gdelt_filepath, dtype={'EventBaseCode': str}) for gdelt_filepath in gdelt_filepaths]
+
+# def read_gdelt(filepath):
+#     gdelt = pd.read_csv(filepath, dtype={'EventBaseCode': str})
+#     colnames = data.columns
+#     gdelt = gdelt.rename(columns={'Actor1CountryCode' : colnames[0],
+#                                 'Actor2CountryCode' : colnames[1],
+#                                 'EventBaseCode' : colnames[2],
+#                                 'SQLDATE' : colnames[3],
+#                                 'NumMentions' : colnames[4]})
+#     gdelt = gdelt[gdelt['CAMEO_Code'].str.isnumeric()]
+#     gdelt['CAMEO_Code'] = gdelt['CAMEO_Code'].astype(int)
+#     gdelt['formatteddate'] = pd.to_datetime(gdelt['formatteddate'], format='%Y%m%d')
+#     gdelt['formatteddate'] = gdelt['formatteddate'].dt.strftime('%Y-%m-%d')
+#     return gdelt
+
+# if parallel:
+#     if __name__ == '__main__':
+#         gdelt = Parallel(n_jobs = multiprocessing.cpu_count())(
+#             delayed(read_gdelt)(gdelt_filepath)
+#             for gdelt_filepath in tqdm(gdelt_filepaths, desc='Reading GDELT data')
+#             )
+# else:
+#     gdelt = [read_gdelt(gdelt_filepath) for gdelt_filepath in tqdm(gdelt_filepaths, desc='Reading GDELT data')]
+
+# gdelt = pd.concat(gdelt)
+
+gdelt1_filepath = 'gdelt1.csv'
+if os.path.exists(gdelt1_filepath):
+    gdelt1 = pd.read_csv(gdelt1_filepath)
+    print(f'{gdelt1_filepath} exists')
 else:
-    data = [pd.read_csv(data_filepath + filepath) for filepath in tqdm(files, desc = 'Reading data')]
-    data = pd.concat(data)
-    data = data.sort_values(by='Num_Events', ascending=False)
-
-# get GDELT data from GDELT database to replace gdelt in original data
-gdelt_filepaths = [os.path.join('GDELT', f) for f in os.listdir('GDELT')]
-# gdelt = [pd.read_csv(gdelt_filepath, dtype={'EventBaseCode': str}) for gdelt_filepath in gdelt_filepaths]
-
-def read_gdelt(filepath):
-    gdelt = pd.read_csv(filepath, dtype={'EventBaseCode': str})
-    colnames = data.columns
-    gdelt = gdelt.rename(columns={'Actor1CountryCode' : colnames[0],
-                                'Actor2CountryCode' : colnames[1],
-                                'EventBaseCode' : colnames[2],
-                                'SQLDATE' : colnames[3],
-                                'NumMentions' : colnames[4]})
-    gdelt = gdelt[gdelt['CAMEO_Code'].str.isnumeric()]
-    gdelt['CAMEO_Code'] = gdelt['CAMEO_Code'].astype(int)
-    gdelt['formatteddate'] = pd.to_datetime(gdelt['formatteddate'], format='%Y%m%d')
-    gdelt['formatteddate'] = gdelt['formatteddate'].dt.strftime('%Y-%m-%d')
-    return gdelt
-
-if parallel:
-    if __name__ == '__main__':
-        gdelt = Parallel(n_jobs = multiprocessing.cpu_count())(
-            delayed(read_gdelt)(gdelt_filepath)
-            for gdelt_filepath in tqdm(gdelt_filepaths, desc='Reading GDELT data')
-            )
-else:
-    gdelt = [read_gdelt(gdelt_filepath) for gdelt_filepath in tqdm(gdelt_filepaths, desc='Reading GDELT data')]
-
-gdelt = pd.concat(gdelt)
+    print(f'Downloading {gdelt1_filepath}')
+    gdelt1 = [process_date(str(year)) for year in tqdm(range(2000, 2016))]
+    gdelt1 = pd.concat(gdelt1)
+    gdelt1.to_csv(gdelt1_filepath, index=False)
+gdelt1 = gdelt1.rename(
+    columns={
+        'Actor1CountryCode' : 'Source_Country_Code',
+        'Actor2CountryCode' : 'Target_Country_Code',
+        'EventBaseCode' : 'CAMEO_Code',
+        'SQLDATE' : 'formatteddate',
+        'NumMentions' : 'Num_Events'
+    }
+)
+gdelt1['formatteddate'] = pd.to_datetime(gdelt1['formatteddate'].astype(str), format='%Y%m%d')
+gdelt1['formatteddate'] = gdelt1['formatteddate'].dt.strftime('%Y-%m-%d')
+gdelt1['Database'] = 'GDELT'
 
 # combine the data
 # we stack the data since the downloaded GDELT data is from before 2015 and the bigquery one is post-2015
 # data = data[data['Database'] != 'GDELT']
-gdelt['Database'] = 'GDELT'
-data = pd.concat([data, gdelt])
+data = pd.concat([data, gdelt1])
 print(data.head())
 print(data.tail())
-del gdelt
+del gdelt1
 gc.collect()
 
 # filter by date to get a smaller dataset to play around with
@@ -184,6 +224,11 @@ data = data[data['formatteddate'].str.startswith(tuple(years))]
 print("Rows before dropna:", data.shape[0])
 data = data.dropna()
 print("Rows after dropna:", data.shape[0])
+
+# drop duplicate rows
+print("Rows before drop duplicates:", data.shape[0])
+data = data.drop_duplicates()
+print("Rows after drop duplicates:", data.shape[0])
 
 # collapse by month
 data['formatteddate'] = data['formatteddate'].str[:7]
