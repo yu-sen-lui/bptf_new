@@ -24,6 +24,7 @@ nntf_parafac_5mode.pkl
 bptf_5mode_50iter.pkl
 nntf_parafac_5mode_2000_2018.pkl
 gdelt1.csv
+*.pkl
 
 # Log files
 output.log
