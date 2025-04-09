@@ -112,7 +112,17 @@ if include_mask:
     flattened_indices = flattened_indices.astype(np.int64)
     TERRIER_mask = sparse.COO(coords=flattened_indices, data=np.zeros(flattened_indices.shape[1]), shape=Y.shape)
 
-    Y_mask = ICEWS_mask + TERRIER_mask
+    # For GDELT, we have an issue with GDELT1
+    # GDELT1 spans up to 2014, and April of each year has an abnormally large count, about 5 times the other months
+    select_aprils = list(range(3, 12*(2015-2000), 12))
+    GDELT_masked_months = np.array(select_aprils)
+    coordinates = np.meshgrid(I_range, I_range, A_range, GDELT_masked_months, np.ones(1))
+    flattened_indices = [np.ravel(coords) for coords in coordinates]
+    flattened_indices = np.vstack(flattened_indices)
+    flattened_indices = flattened_indices.astype(np.int64)
+    GDELT_mask = sparse.COO(coords=flattened_indices, data=np.zeros(flattened_indices.shape[1]), shape=Y.shape)
+
+    Y_mask = ICEWS_mask + TERRIER_mask + GDELT_mask
     check_mask(Y_mask)
 else:
     Y_mask = None

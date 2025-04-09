@@ -190,7 +190,7 @@ if os.path.exists(gdelt1_filepath):
     print(f'{gdelt1_filepath} exists')
 else:
     print(f'Downloading {gdelt1_filepath}')
-    gdelt1 = [process_date(str(year)) for year in tqdm(range(2000, 2016))]
+    gdelt1 = [process_date(str(year)) for year in tqdm(range(2000, 2015))]
     gdelt1 = pd.concat(gdelt1)
     gdelt1.to_csv(gdelt1_filepath, index=False)
 gdelt1 = gdelt1.rename(
@@ -225,10 +225,7 @@ print("Rows before dropna:", data.shape[0])
 data = data.dropna()
 print("Rows after dropna:", data.shape[0])
 
-# drop duplicate rows
-print("Rows before drop duplicates:", data.shape[0])
-data = data.drop_duplicates()
-print("Rows after drop duplicates:", data.shape[0])
+print(data.dtypes)
 
 # collapse by month
 data['formatteddate'] = data['formatteddate'].str[:7]
