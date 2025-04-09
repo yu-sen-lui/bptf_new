@@ -189,10 +189,13 @@ if os.path.exists(gdelt1_filepath):
     gdelt1 = pd.read_csv(gdelt1_filepath)
     print(f'{gdelt1_filepath} exists')
 else:
+    "At present the GDELT 2.0 data streams only stretch back to late morning February 19, 2015"
+    "From the gdelt documentation"
     print(f'Downloading {gdelt1_filepath}')
-    gdelt1 = [process_date(str(year)) for year in tqdm(range(2000, 2015))]
+    gdelt1 = [process_date(str(year)) for year in range(2000, 2016)]
     gdelt1 = pd.concat(gdelt1)
     gdelt1.to_csv(gdelt1_filepath, index=False)
+gdelt1 = gdelt1[gdelt1['SQLDATE'] <= 20150218]
 gdelt1 = gdelt1.rename(
     columns={
         'Actor1CountryCode' : 'Source_Country_Code',

@@ -61,13 +61,31 @@ Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
 n_components = 100
 max_iter = 100
-# fitting without mask, just doing an inner join of all 3 datasets
+# fitting an inner join of all 3 datasets
 Y_2000_2018 = Y[:, :, :, :(12*(2019-2000)), :]
+
+# we need a mask for the aprils of GDELT here as well
+if include_mask:
+    # For GDELT, we have an issue with GDELT1
+    # GDELT1 spans up to 2014, and April of each year has an abnormally large count, about 5 times the other months
+    I_range = np.arange(Y_2000_2018.shape[0])
+    A_range = np.arange(Y_2000_2018.shape[2])
+    T_range = np.arange(Y_2000_2018.shape[3])
+    D_range = np.arange(Y_2000_2018.shape[4])
+
+    select_aprils = list(range(3, 12*(2015-2000), 12))
+    GDELT_masked_months = np.array(select_aprils)
+    coordinates = np.meshgrid(I_range, I_range, A_range, GDELT_masked_months, np.ones(1))
+    flattened_indices = [np.ravel(coords) for coords in coordinates]
+    flattened_indices = np.vstack(flattened_indices)
+    flattened_indices = flattened_indices.astype(np.int64)
+    GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y_2000_2018.shape)    
+
 bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components)
 filepath = f'bptf_5mode_{max_iter}iter_2000_2018.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
-    bptf_5mode.fit(Y_2000_2018, max_iter = max_iter, mask=None,verbose=False)
+    bptf_5mode.fit(Y_2000_2018, max_iter = max_iter, mask=GDELT_mask,verbose=False)
     with open(filepath, 'wb') as f:
         pickle.dump(bptf_5mode, f)
 else:
