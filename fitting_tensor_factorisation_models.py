@@ -64,7 +64,7 @@ max_iter = 100
 # fitting without mask, just doing an inner join of all 3 datasets
 Y_2000_2018 = Y[:, :, :, :(12*(2019-2000)), :]
 bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components)
-filepath = 'bptf_5mode_50iter_2000_2018.pkl'
+filepath = f'bptf_5mode_{max_iter}iter_2000_2018.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
     bptf_5mode.fit(Y_2000_2018, max_iter = max_iter, mask=None,verbose=False)
@@ -102,7 +102,7 @@ if include_mask:
     flattened_indices = [np.ravel(coords) for coords in coordinates]
     flattened_indices = np.vstack(flattened_indices)
     flattened_indices = flattened_indices.astype(np.int64)
-    ICEWS_mask = sparse.COO(coords=flattened_indices, data=np.zeros(flattened_indices.shape[1]), shape=Y.shape)
+    ICEWS_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
 
     # TERRIER
     TERRIER_masked_months = np.arange(Y.shape[3])[-5*12:]
@@ -110,7 +110,7 @@ if include_mask:
     flattened_indices = [np.ravel(coords) for coords in coordinates]
     flattened_indices = np.vstack(flattened_indices)
     flattened_indices = flattened_indices.astype(np.int64)
-    TERRIER_mask = sparse.COO(coords=flattened_indices, data=np.zeros(flattened_indices.shape[1]), shape=Y.shape)
+    TERRIER_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
 
     # For GDELT, we have an issue with GDELT1
     # GDELT1 spans up to 2014, and April of each year has an abnormally large count, about 5 times the other months
@@ -120,7 +120,7 @@ if include_mask:
     flattened_indices = [np.ravel(coords) for coords in coordinates]
     flattened_indices = np.vstack(flattened_indices)
     flattened_indices = flattened_indices.astype(np.int64)
-    GDELT_mask = sparse.COO(coords=flattened_indices, data=np.zeros(flattened_indices.shape[1]), shape=Y.shape)
+    GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
 
     Y_mask = ICEWS_mask + TERRIER_mask + GDELT_mask
     check_mask(Y_mask)
@@ -128,7 +128,7 @@ else:
     Y_mask = None
 
 bptf_5mode = BPTF(data_shape=Y.shape, n_components=n_components)
-filepath = 'bptf_5mode_50iter_2000_2024.pkl'
+filepath = f'bptf_5mode_{max_iter}iter_2000_2024.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
     bptf_5mode.fit(Y, max_iter = max_iter, mask=Y_mask,verbose=False)
