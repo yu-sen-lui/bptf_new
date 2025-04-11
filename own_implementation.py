@@ -35,8 +35,8 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.rte_DK_M = [torch.ones(D, self.K, dtype=torch.float64, device=device) for D in self.data_shape]
 
         # arithmetic and geometric expectation of factor matrices
-        self.E_DK_M = np.array([np.ones((D, self.K)) for D in self.data_shape], dtype='object')  
-        self.G_DK_M = np.array([np.ones((D, self.K)) for D in self.data_shape], dtype='object')
+        self.E_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
+        self.G_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
 
     def reconstruct(self, mask=None, drop_diag=False, fill_value = 0, style='arithmetic'):
         """
@@ -133,3 +133,16 @@ class BPTF(BaseEstimator, TransformerMixin):
             mask = torch.ones(self.data_shape, device=self.device)
         
         denominator = tl.cp_tensor.cp_to_tensor(cp_tensor=())
+
+    def _update_cache(self, m, data, mask = None):
+        """
+        Updates statistics required in updating variational and hyperparameters
+        Args:
+            m: mth mode of tensor. Natural number
+            data: torch tensor,
+            mask: binary torch tensor of the same dimensions as data. 1 is for observed data, 0 for unobserved
+        """
+        # \sum_{(m)} Mean along mode m for Poisson latent sources
+        data = data if mask == None else data * mask
+        data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
+        
