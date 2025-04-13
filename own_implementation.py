@@ -46,6 +46,9 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.E_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
         self.G_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
 
+        # small positive number to prevent division by 0
+        self.epsilon = 10e-10
+
     def reconstruct(self, mask=None, drop_diag=False, fill_value = 0, style='arithmetic'):
         """
         Reconstructs the tensor using the factor matrices
@@ -97,7 +100,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.rte_DK_M[m] = gamma_dist.sample((D, self.K))
 
         # initialising statistics of variational surrogate distributions
-        self.E_DK_M[m] = 1. / self.shp_DK_M[m] / self.rte_DK_M[m]
+        self.E_DK_M[m] = self.shp_DK_M[m] / self.rte_DK_M[m]
         self.G_DK_M[m] = torch.exp(torch.digamma(self.shp_DK_M[m]) - torch.log(self.rte_DK_M[m]))
 
         # initialise prior rate hyperparameter using empirical bayes method
@@ -114,7 +117,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         assert torch.isfinite(self.E_DK_M[m]).all().item(), "Infinite"
         assert torch.isfinite(self.G_DK_M[m]).all().item(), "Infinite"
 
-    def _init(self, **kwargs):
+    def _init(self, modes = None, **kwargs):
         """
         Initialise:
         Variational parameters
@@ -124,7 +127,7 @@ class BPTF(BaseEstimator, TransformerMixin):
             m: int. mth mode of the tensor
         """
 
-        modes = range(self.n_modes)
+        modes = range(self.n_modes) if modes is None else list(set(modes))
 
         for m in modes:
             self._init_mode(m, **kwargs)
@@ -138,18 +141,20 @@ class BPTF(BaseEstimator, TransformerMixin):
             data: data tensor, torch tensor with same device as self.device
             mask: binary tensor with same shape as data tensor, 1 for observed
         """
-        if mask == None:
+        if mask is None:
             mask = torch.ones(self.data_shape, device=self.device)
         
         # update variational shape parameter
+        # equation 4
         self.shp_DK_M[m] = self.alpha + self.Epsilon_DK_M[m]
+        # equation 5
         self.rte_DK_M[m] = self.alpha * self.beta_M[m] + tl.tenalg.unfolding_dot_khatri_rao(
             tensor = mask,
             factors = self.E_DK_M,
             mode = m
         )
 
-        self._update_cache(self, m, data, mask)
+        self._update_cache(m, data, mask)
 
     def _update_cache(self, m, data, mask = None):
         """
@@ -160,14 +165,14 @@ class BPTF(BaseEstimator, TransformerMixin):
             mask: binary torch tensor of the same dimensions as data. 1 is for observed data, 0 for unobserved
         """
         # \sum_{(m)} Mean along mode m for Poisson latent sources
-        data = data if mask == None else data * mask
+        data = data if mask is None else data * mask
         data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
         self.Epsilon_DK_M[m] = self.G_DK_M[m] * tl.tenalg.unfolding_dot_khatri_rao(
-            tensor=data / data_hat,
+            tensor=data / data_hat + self.epsilon,
             factors=self.G_DK_M,
             mode=m
         )
-        self.G_DK_M[m] = torch.exp(torch.digamma(self.shp_DK_M[m])) - torch.log(self.rte_DK_M[m])
+        self.G_DK_M[m] = torch.exp(torch.digamma(self.shp_DK_M[m]) - torch.log(self.rte_DK_M[m]))
         self.E_DK_M[m] = self.shp_DK_M[m] / self.rte_DK_M[m]
 
     def _update_beta(self, m):
@@ -177,3 +182,91 @@ class BPTF(BaseEstimator, TransformerMixin):
             m: integer, mth mode of the data tensor
         """
         self.beta_M[m] = 1. / torch.mean(self.E_DK_M[m])
+
+    def _clamp_component(self, data, m, mask=None):
+        """
+        Sets this mode's cached variables to constants
+        """
+        self.E_DK_M[m] = self.G_DK_M[m]
+        self.beta_M[m] = 1. / torch.mean(self.E_DK_M[m])
+        data = data if mask is None else data * mask
+        data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
+        self.Epsilon_DK_M[m] = self.G_DK_M[m] * tl.tenalg.unfolding_dot_khatri_rao(
+            tensor=data / data_hat + self.epsilon,
+            factors=self.G_DK_M,
+            mode=m
+        )
+
+    def _update(self, data, mask=None, modes=None, **kwargs):
+        """
+        Call this 
+        """
+        modes = range(self.n_modes) if modes is None else list(set(modes))
+
+        for m in range(self.n_modes):
+            if m not in modes:
+                self._clamp_component(data, m, mask=mask)
+
+        curr_elbo = self._elbo(data, mask)
+        
+        verbose = kwargs.get('verbose', True)
+        max_iter = kwargs.get('max_iter', 100)
+
+        progressbar = tqdm(range(max_iter)) if verbose else range(max_iter)
+        for itn in progressbar:
+
+            s = time.time()
+            for m in modes:
+                self._update_variational_params(m, data, mask)
+                self._update_beta(m)
+                self._check_mode(m)
+            bound = self._elbo(data, mask)
+            delta = (bound - curr_elbo) / abs(curr_elbo)
+            if verbose:
+                e = time.time() - s
+                progressbar.set_description(f'ELBO = {bound}, change = {delta}, time taken = {e}')
+
+            # check if the change is in the wrong direction
+            assert delta >= 0.0
+            curr_elbo = bound
+            if delta < kwargs.get('tol', 1e-4):
+                if verbose:
+                    progressbar.set_description('Change is small enough, early break')
+                break
+
+    def _elbo(self, data, mask=None):
+        """
+        Computes the variational lower bound using geometric means
+        """
+        Y_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
+        Y_hat = Y_hat.clamp(min=self.epsilon)
+
+        # count only the observed elements of the tensor
+        if mask is not None:
+            data = data[mask == 1]
+            Y_hat = Y_hat[mask == 1]
+        
+        # compute observed loglik portion log(\phi)
+        log_likelihood = (data * torch.log(Y_hat) - Y_hat - torch.lgamma(data + 1)).sum()
+
+        # terms from surrogate distribution E_Q(Q)
+        kl_total = 0.0
+        for m in range(self.n_modes):
+            kl_matrix = (self.shp_DK_M[m] * (torch.log(self.rte_DK_M[m]) - torch.log(self.beta_M[m]))
+                         - torch.lgamma(self.shp_DK_M[m])
+                         + torch.lgamma(self.alpha)
+                         + (self.shp_DK_M[m] - self.alpha) * torch.digamma(self.shp_DK_M[m])
+                         + self.alpha * (self.beta_M[m] / self.rte_DK_M[m] - 1))
+            kl_total += kl_matrix.sum()
+        
+        return log_likelihood - kl_total
+    
+    def fit(self, data, mask=None, **kwargs):
+        """
+        Call this to fit the model to the given data and mask
+        """
+        assert data.shape == expected_shape, f"Expected shape {expected_shape} but got {data.shape}"
+
+        self._init()
+        self._update(data, mask, None, **kwargs)
+        return self
