@@ -7,6 +7,11 @@ import tensorly as tl
 tl.set_backend('pytorch')
 from sklearn.base import BaseEstimator, TransformerMixin
 
+# switching to memory efficient mttkrp
+from tensorly.tenalg.core_tenalg.mttkrp import unfolding_dot_khatri_rao_memory
+tl.tenalg.register_backend_method("unfolding_dot_khatri_rao", unfolding_dot_khatri_rao_memory)
+tl.tenalg.use_dynamic_dispatch()
+
 class BPTF(BaseEstimator, TransformerMixin):
     def __init__(self, data_shape, n_components, alpha = 0.1, device="cpu"):
         """
@@ -31,8 +36,11 @@ class BPTF(BaseEstimator, TransformerMixin):
 
         # variational parameters
         # distributions are gamma with shape and RATE parameters
-        self.shp_DK_M = [torch.ones(D, self.K, dtype=torch.float64, device=device) for D in self.data_shape]
-        self.rte_DK_M = [torch.ones(D, self.K, dtype=torch.float64, device=device) for D in self.data_shape]
+        self.shp_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
+        self.rte_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
+
+        # sufficient statistics of latent source posterior distribution
+        self.Epsilon_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
 
         # arithmetic and geometric expectation of factor matrices
         self.E_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
@@ -128,11 +136,20 @@ class BPTF(BaseEstimator, TransformerMixin):
         Args:
             m: mth mode of the data tensor
             data: data tensor, torch tensor with same device as self.device
+            mask: binary tensor with same shape as data tensor, 1 for observed
         """
         if mask == None:
             mask = torch.ones(self.data_shape, device=self.device)
         
-        denominator = tl.cp_tensor.cp_to_tensor(cp_tensor=())
+        # update variational shape parameter
+        self.shp_DK_M[m] = self.alpha + self.Epsilon_DK_M[m]
+        self.rte_DK_M[m] = self.alpha * self.beta_M[m] + tl.tenalg.unfolding_dot_khatri_rao(
+            tensor = mask,
+            factors = self.E_DK_M,
+            mode = m
+        )
+
+        self._update_cache(self, m, data, mask)
 
     def _update_cache(self, m, data, mask = None):
         """
@@ -145,4 +162,18 @@ class BPTF(BaseEstimator, TransformerMixin):
         # \sum_{(m)} Mean along mode m for Poisson latent sources
         data = data if mask == None else data * mask
         data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
-        
+        self.Epsilon_DK_M[m] = self.G_DK_M[m] * tl.tenalg.unfolding_dot_khatri_rao(
+            tensor=data / data_hat,
+            factors=self.G_DK_M,
+            mode=m
+        )
+        self.G_DK_M[m] = torch.exp(torch.digamma(self.shp_DK_M[m])) - torch.log(self.rte_DK_M[m])
+        self.E_DK_M[m] = self.shp_DK_M[m] / self.rte_DK_M[m]
+
+    def _update_beta(self, m):
+        """
+        Updates prior rate hyperparameter using empirical Bayes approach
+        Args:
+            m: integer, mth mode of the data tensor
+        """
+        self.beta_M[m] = 1. / torch.mean(self.E_DK_M[m])
