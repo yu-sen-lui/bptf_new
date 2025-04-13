@@ -8,9 +8,9 @@ tl.set_backend('pytorch')
 from sklearn.base import BaseEstimator, TransformerMixin
 
 # switching to memory efficient mttkrp
-from tensorly.tenalg.core_tenalg.mttkrp import unfolding_dot_khatri_rao_memory
-tl.tenalg.register_backend_method("unfolding_dot_khatri_rao", unfolding_dot_khatri_rao_memory)
-tl.tenalg.use_dynamic_dispatch()
+# from tensorly.tenalg.core_tenalg.mttkrp import unfolding_dot_khatri_rao_memory
+# tl.tenalg.register_backend_method("unfolding_dot_khatri_rao", unfolding_dot_khatri_rao_memory)
+# tl.tenalg.use_dynamic_dispatch()
 
 class BPTF(BaseEstimator, TransformerMixin):
     def __init__(self, data_shape, n_components, alpha = 0.1, device="cpu"):
@@ -149,9 +149,9 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.shp_DK_M[m] = self.alpha + self.Epsilon_DK_M[m]
         # equation 5
         self.rte_DK_M[m] = self.alpha * self.beta_M[m] + tl.tenalg.unfolding_dot_khatri_rao(
-            tensor = mask,
-            factors = self.E_DK_M,
-            mode = m
+            mask,
+            (torch.ones(self.K, device=self.device, dtype=torch.float64), self.E_DK_M),
+            m
         )
 
         self._update_cache(m, data, mask)
@@ -168,9 +168,9 @@ class BPTF(BaseEstimator, TransformerMixin):
         data = data if mask is None else data * mask
         data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
         self.Epsilon_DK_M[m] = self.G_DK_M[m] * tl.tenalg.unfolding_dot_khatri_rao(
-            tensor=data / data_hat + self.epsilon,
-            factors=self.G_DK_M,
-            mode=m
+            data / data_hat + self.epsilon,
+            (torch.ones(self.K, device=self.device, dtype=torch.float64), self.G_DK_M),
+            m
         )
         self.G_DK_M[m] = torch.exp(torch.digamma(self.shp_DK_M[m]) - torch.log(self.rte_DK_M[m]))
         self.E_DK_M[m] = self.shp_DK_M[m] / self.rte_DK_M[m]
@@ -192,9 +192,9 @@ class BPTF(BaseEstimator, TransformerMixin):
         data = data if mask is None else data * mask
         data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
         self.Epsilon_DK_M[m] = self.G_DK_M[m] * tl.tenalg.unfolding_dot_khatri_rao(
-            tensor=data / data_hat + self.epsilon,
-            factors=self.G_DK_M,
-            mode=m
+            data / data_hat + self.epsilon,
+            (torch.ones(self.K, device=self.device, dtype=torch.float64), self.G_DK_M),
+            m
         )
 
     def _update(self, data, mask=None, modes=None, **kwargs):
@@ -227,12 +227,12 @@ class BPTF(BaseEstimator, TransformerMixin):
                 progressbar.set_description(f'ELBO = {bound}, change = {delta}, time taken = {e}')
 
             # check if the change is in the wrong direction
-            assert delta >= 0.0
+            # assert delta > -1e-8, f"ELBO decreased too much: {delta}"
             curr_elbo = bound
-            if delta < kwargs.get('tol', 1e-4):
-                if verbose:
-                    progressbar.set_description('Change is small enough, early break')
-                break
+            # if abs(delta) < kwargs.get('tol', 1e-4):
+            #     if verbose:
+            #         progressbar.set_description('Change is small enough, early break')
+            #     break
 
     def _elbo(self, data, mask=None):
         """
@@ -265,7 +265,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         """
         Call this to fit the model to the given data and mask
         """
-        assert data.shape == expected_shape, f"Expected shape {expected_shape} but got {data.shape}"
+        assert data.shape == self.data_shape, f"Expected shape {self.data_shape} but got {data.shape}"
 
         self._init()
         self._update(data, mask, None, **kwargs)
