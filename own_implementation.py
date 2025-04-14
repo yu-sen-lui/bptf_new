@@ -154,7 +154,8 @@ class BPTF(BaseEstimator, TransformerMixin):
             m
         )
 
-        self._update_cache(m, data, mask)
+        self.shp_DK_M[m].clamp_(max=1e10)
+        self.rte_DK_M[m].clamp_(max=1e10)
 
     def _update_cache(self, m, data, mask = None):
         """
@@ -199,7 +200,7 @@ class BPTF(BaseEstimator, TransformerMixin):
 
     def _update(self, data, mask=None, modes=None, **kwargs):
         """
-        Call this 
+        Call this to run the update for max_iter times
         """
         modes = range(self.n_modes) if modes is None else list(set(modes))
 
@@ -218,6 +219,7 @@ class BPTF(BaseEstimator, TransformerMixin):
             s = time.time()
             for m in modes:
                 self._update_variational_params(m, data, mask)
+                self._update_cache(m, data, mask)
                 self._update_beta(m)
                 self._check_mode(m)
             bound = self._elbo(data, mask)
