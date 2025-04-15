@@ -142,7 +142,7 @@ class BPTF(BaseEstimator, TransformerMixin):
             mask: binary tensor with same shape as data tensor, 1 for observed
         """
         if mask is None:
-            mask = torch.ones(self.data_shape, device=self.device)
+            mask = torch.ones(self.data_shape, device=self.device, dtype=torch.float64)
         
         # update variational shape parameter
         # equation 4
