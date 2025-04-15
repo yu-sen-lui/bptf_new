@@ -229,12 +229,12 @@ class BPTF(BaseEstimator, TransformerMixin):
                 progressbar.set_description(f'ELBO = {bound}, change = {delta}, time taken = {e}')
 
             # check if the change is in the wrong direction
-            # assert delta > -1e-8, f"ELBO decreased too much: {delta}"
+            assert delta > -1e-8, f"ELBO is negative: {delta}"
             curr_elbo = bound
-            # if abs(delta) < kwargs.get('tol', 1e-4):
-            #     if verbose:
-            #         progressbar.set_description('Change is small enough, early break')
-            #     break
+            if abs(delta) < kwargs.get('tol', 1e-4):
+                if verbose:
+                    progressbar.set_description('Change is small enough, early break')
+                break
 
     def _elbo(self, data, mask=None):
         """
@@ -253,7 +253,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         
         data = data if mask is None else data * mask
         ratio = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M), mask=None)
-        ratio /= tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M), mask=None).sum(dim=-1, keepdim=True)
+        ratio /= ratio.sum(dim=-1, keepdim=True).clamp_min(self.epsilon)
         pos_multinomial_prob = data * ratio
         variational_bound -= (pos_multinomial_prob * torch.log(pos_multinomial_prob)).sum()
 
