@@ -238,30 +238,26 @@ class BPTF(BaseEstimator, TransformerMixin):
 
     def _elbo(self, data, mask=None):
         """
-        Computes the variational lower bound using geometric means
+        Computes the variational lower bound
+        Terms that don't change over iterations are omitted
         """
-        Y_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
-        Y_hat = Y_hat.clamp(min=self.epsilon)
+        variational_bound = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.E_DK_M), mask=None)
+        variational_bound = variational_bound if mask is None else variational_bound * mask
+        variational_bound = -variational_bound.sum()
 
-        # count only the observed elements of the tensor
-        if mask is not None:
-            data = data[mask == 1]
-            Y_hat = Y_hat[mask == 1]
-        
-        # compute observed loglik portion log(\phi)
-        log_likelihood = (data * torch.log(Y_hat) - Y_hat - torch.lgamma(data + 1)).sum()
-
-        # terms from surrogate distribution E_Q(Q)
-        kl_total = 0.0
         for m in range(self.n_modes):
-            kl_matrix = (self.shp_DK_M[m] * (torch.log(self.rte_DK_M[m]) - torch.log(self.beta_M[m]))
-                         - torch.lgamma(self.shp_DK_M[m])
-                         + torch.lgamma(self.alpha)
-                         + (self.shp_DK_M[m] - self.alpha) * torch.digamma(self.shp_DK_M[m])
-                         + self.alpha * (self.beta_M[m] / self.rte_DK_M[m] - 1))
-            kl_total += kl_matrix.sum()
+            variational_bound += ((self.alpha + self.Epsilon_DK_M[m] - 1.) * torch.log(self.G_DK_M[m])).sum()
+            variational_bound += (-self.alpha*self.beta_M[m] * self.E_DK_M[m] + self.alpha * torch.log(self.beta_M[m])).sum()
+            variational_bound -= ((self.shp_DK_M[m] - 1)*self.E_DK_M[m] - self.rte_DK_M[m]*self.E_DK_M[m] + 
+                                  self.shp_DK_M[m]*torch.log(self.rte_DK_M[m]) - torch.lgamma(self.shp_DK_M[m])).sum()
         
-        return log_likelihood - kl_total
+        data = data if mask is None else data * mask
+        ratio = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M), mask=None)
+        ratio /= tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M), mask=None).sum(dim=-1, keepdim=True)
+        pos_multinomial_prob = data * ratio
+        variational_bound -= (pos_multinomial_prob * torch.log(pos_multinomial_prob)).sum()
+
+        return variational_bound
     
     def fit(self, data, mask=None, **kwargs):
         """
