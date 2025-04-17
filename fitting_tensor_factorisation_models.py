@@ -87,7 +87,7 @@ bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components)
 filepath = f'bptf_5mode_{max_iter}iter_2000_2018.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
-    bptf_5mode.fit(Y_2000_2018, max_iter = max_iter, mask=GDELT_mask,verbose=True, missing_val=1)
+    bptf_5mode.fit(Y_2000_2018, max_iter = max_iter, mask=GDELT_mask, verbose=True, missing_val=1)
     with open(filepath, 'wb') as f:
         pickle.dump(bptf_5mode, f)
 else:

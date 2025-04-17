@@ -1,0 +1,105 @@
+# packages ========================================================================================
+import sys
+from IPython.display import display, Javascript
+
+def restart_kernel():
+    """Restart the Jupyter Notebook kernel to reflect changes in modules and packages."""
+    display(Javascript("Jupyter.notebook.kernel.restart()"))
+    print("Kernel is restarting...")
+
+restart_kernel()
+
+import bptf
+from own_implementation import BPTF
+import numpy as np
+import pandas as pd
+import sparse
+import os
+import shutil
+from tqdm import tqdm
+import pickle
+import scipy.stats as st
+import matplotlib.pyplot as plt
+import torch
+
+import tensorly
+import cupy
+
+import multiprocessing
+from joblib import Parallel, delayed
+from tqdm.contrib.concurrent import process_map
+
+print(os.getcwd())
+
+import gc
+gc.collect()
+
+def check_mask(tensor):
+    if not isinstance(tensor, np.ndarray):
+        tensor = tensor.todense()
+    assert ((tensor == 0) | (tensor == 1)).all()
+
+# Get tensor ======================================================================================
+assert os.path.exists('sptensor.pkl'), 'No such file.'
+with open('sptensor.pkl', 'rb') as f:
+    Y = pickle.load(f)
+
+# Tensor factorisation ============================================================================
+# decompose the tensor using Poisson CP decomposition
+gc.collect()
+
+include_mask = True
+if include_mask:
+    print('Including mask')
+else:
+    print('Not including mask')
+
+# need to enforce self-country actions = 0
+mask = Y.coords[0] != Y.coords[1]
+new_coords = Y.coords[:, mask].copy()
+new_data = Y.data[mask].copy()
+Y = sparse.COO(new_coords, new_data, shape=Y.shape)
+
+n_components = 100
+max_iter = 100
+device = 'cuda'
+# fitting an inner join of all 3 datasets
+Y_2000_2018 = torch.tensor(Y[:, :, :, :(12*(2019-2000)), :].todense(), dtype=torch.float64, device=device)
+
+# we need a mask for the aprils of GDELT here as well
+if include_mask:
+    # For GDELT, we have an issue with GDELT1
+    # GDELT1 spans up to 2014, and April of each year has an abnormally large count, about 5 times the other months
+    I_range = np.arange(Y_2000_2018.shape[0])
+    A_range = np.arange(Y_2000_2018.shape[2])
+    T_range = np.arange(Y_2000_2018.shape[3])
+    D_range = np.arange(Y_2000_2018.shape[4])
+
+    select_aprils = list(range(3, 12*(2015-2000), 12))
+    GDELT_masked_months = np.array(select_aprils)
+    coordinates = np.meshgrid(I_range, I_range, A_range, GDELT_masked_months, np.ones(1))
+    flattened_indices = [np.ravel(coords) for coords in coordinates]
+    flattened_indices = np.vstack(flattened_indices)
+    flattened_indices = flattened_indices.astype(np.int64)
+    GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y_2000_2018.shape)
+    GDELT_mask = (1 - GDELT_mask.todense()).astype(np.int64)
+    GDELT_mask = torch.tensor(GDELT_mask.copy(), dtype=torch.float64, device=device)
+
+bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components, device=device)
+filepath = f'bptf_5mode_{max_iter}iter_2000_2018_own_implementation.pkl'
+if not os.path.exists(filepath):
+    print('Fitting with BPTF')
+    bptf_5mode.fit(Y_2000_2018, mask=GDELT_mask, max_iter = max_iter, tol=1e-10, verbose=True)
+    with open(filepath, 'wb') as f:
+        pickle.dump(bptf_5mode, f)
+else:
+    print(f'{filepath} exists')
+    with open(filepath, 'rb') as f:
+        bptf_5mode = pickle.load(f)
+
+# check the shapes
+for j in range(len(Y_2000_2018.shape)):
+    assert bptf_5mode.G_DK_M[j].shape == (Y_2000_2018.shape[j], n_components)
+
+del bptf_5mode
+gc.collect()

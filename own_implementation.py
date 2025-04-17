@@ -6,6 +6,7 @@ from tqdm import tqdm
 import tensorly as tl
 tl.set_backend('pytorch')
 from sklearn.base import BaseEstimator, TransformerMixin
+from tensor_utility_functions import unfolding_dot_khatri_rao_memory as unfolding_dot_khatri_rao
 
 # switching to memory efficient mttkrp
 # from tensorly.tenalg.core_tenalg.mttkrp import unfolding_dot_khatri_rao_memory
@@ -153,7 +154,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         # equation 4
         self.shp_DK_M[m] = self.alpha + self.Epsilon_DK_M[m]
         # equation 5
-        self.rte_DK_M[m] = self.alpha * self.beta_M[m] + tl.tenalg.unfolding_dot_khatri_rao(
+        self.rte_DK_M[m] = self.alpha * self.beta_M[m] + unfolding_dot_khatri_rao(
             mask,
             (None, self.E_DK_M),
             m
@@ -174,7 +175,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         data = data if mask is None else data * mask
         data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
         data_hat = torch.clamp(data_hat, min=self.epsilon)
-        self.Epsilon_DK_M[m] = self.G_DK_M[m] * tl.tenalg.unfolding_dot_khatri_rao(
+        self.Epsilon_DK_M[m] = self.G_DK_M[m] * unfolding_dot_khatri_rao(
             data / data_hat,
             (None, self.G_DK_M),
             m
@@ -198,7 +199,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.beta_M[m] = 1. / torch.mean(self.E_DK_M[m])
         data = data if mask is None else data * mask
         data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
-        self.Epsilon_DK_M[m] = self.G_DK_M[m] * tl.tenalg.unfolding_dot_khatri_rao(
+        self.Epsilon_DK_M[m] = self.G_DK_M[m] * unfolding_dot_khatri_rao(
             data / data_hat + self.epsilon,
             (torch.ones(self.K, device=self.device, dtype=torch.float64), self.G_DK_M),
             m
@@ -283,7 +284,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         # return variational_bound
 
         mask = torch.ones_like(data, dtype=torch.float64, device=self.device) if mask is None else mask
-        uttkrp_DK =  tl.tenalg.unfolding_dot_khatri_rao(
+        uttkrp_DK =  unfolding_dot_khatri_rao(
             mask,
             (None, self.E_DK_M),
             0
