@@ -8,6 +8,9 @@ tl.set_backend('pytorch')
 from sklearn.base import BaseEstimator, TransformerMixin
 from tensor_utility_functions import unfolding_dot_khatri_rao_memory as unfolding_dot_khatri_rao
 
+torch.set_default_dtype(torch.float64)
+torch.backends.cuda.matmul.allow_tf32 = False
+
 # switching to memory efficient mttkrp
 # from tensorly.tenalg.core_tenalg.mttkrp import unfolding_dot_khatri_rao_memory
 # tl.tenalg.register_backend_method("unfolding_dot_khatri_rao", unfolding_dot_khatri_rao_memory)
@@ -174,7 +177,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         # \sum_{(m)} Mean along mode m for Poisson latent sources
         data = data if mask is None else data * mask
         data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
-        data_hat = torch.clamp(data_hat, min=self.epsilon)
+        # data_hat = torch.clamp(data_hat, min=self.epsilon)
         self.Epsilon_DK_M[m] = self.G_DK_M[m] * unfolding_dot_khatri_rao(
             data / data_hat,
             (None, self.G_DK_M),
