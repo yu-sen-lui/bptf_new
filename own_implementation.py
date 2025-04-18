@@ -51,7 +51,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.G_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
 
         # small positive number to prevent division by 0
-        self.epsilon = 10e-10
+        self.epsilon = 0
 
     def reconstruct(self, mask=None, drop_diag=False, fill_value = 0, style='arithmetic'):
         """
@@ -239,7 +239,7 @@ class BPTF(BaseEstimator, TransformerMixin):
                 progressbar.set_description(f'ELBO = {bound}, change = {delta}, time taken = {e}')
 
             # check if the change is in the wrong direction
-            assert delta > -1e-1, f"ELBO is negative: {delta}"
+            assert delta >= 0.0, f"ELBO is negative: {delta}"
             curr_elbo = bound
             if abs(delta) < kwargs.get('tol', 1e-4):
                 if verbose:
