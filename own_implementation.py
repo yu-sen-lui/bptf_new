@@ -7,6 +7,7 @@ import tensorly as tl
 tl.set_backend('pytorch')
 from sklearn.base import BaseEstimator, TransformerMixin
 from tensor_utility_functions import unfolding_dot_khatri_rao_memory as unfolding_dot_khatri_rao
+from tensorly.cp_tensor import cp_to_tensor
 
 torch.set_default_dtype(torch.float64)
 torch.backends.cuda.matmul.allow_tf32 = False
@@ -51,7 +52,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.G_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
 
         # small positive number to prevent division by 0
-        self.epsilon = 0
+        self.epsilon = 1e-10
 
     def reconstruct(self, mask=None, drop_diag=False, fill_value = 0, style='arithmetic'):
         """
@@ -66,7 +67,8 @@ class BPTF(BaseEstimator, TransformerMixin):
         assert style in ['arithmetic', 'geometric'], "Wrong style"
         
         factors = self.G_DK_M if style == 'geometric' else self.E_DK_M
-        Y_recon = tl.cp_tensor.cp_to_tensor(cp_tensor=(torch.ones(self.K, device=self.device), factors))
+        # Y_recon = tl.cp_tensor.cp_to_tensor(cp_tensor=(torch.ones(self.K, device=self.device), factors))
+        Y_recon = cp_to_tensor(cp_tensor=(torch.ones(self.K, device=self.device), factors))
 
         # fill in mask with fill_value because they are not observed
         if mask is not None:
@@ -120,11 +122,13 @@ class BPTF(BaseEstimator, TransformerMixin):
         assert torch.isfinite(self.rte_DK_M[m]).all().item(), "Infinite"
         assert torch.isfinite(self.E_DK_M[m]).all().item(), "Infinite"
         assert torch.isfinite(self.G_DK_M[m]).all().item(), "Infinite"
+        assert torch.isfinite(self.Epsilon_DK_M[m]).all().item(), "Infinite"
 
         assert not torch.isnan(self.shp_DK_M[m]).any(), "NaN found in shp_DK_M"
         assert not torch.isnan(self.rte_DK_M[m]).any(), "NaN found in rte_DK_M"
         assert not torch.isnan(self.E_DK_M[m]).any(), "NaN found in E_DK_M"
         assert not torch.isnan(self.G_DK_M[m]).any(), "NaN found in G_DK_M"
+        assert not torch.isnan(self.Epsilon_DK_M[m]).any(), "NaN found in Epsilon_DK_M"
 
     def _init(self, modes = None, **kwargs):
         """
@@ -176,10 +180,11 @@ class BPTF(BaseEstimator, TransformerMixin):
         """
         # \sum_{(m)} Mean along mode m for Poisson latent sources
         data = data if mask is None else data * mask
-        data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
+        # data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
+        data_hat = cp_to_tensor(cp_tensor=(None, self.G_DK_M))
         # data_hat = torch.clamp(data_hat, min=self.epsilon)
         self.Epsilon_DK_M[m] = self.G_DK_M[m] * unfolding_dot_khatri_rao(
-            data / data_hat,
+            torch.exp(torch.log(data) - torch.log(data_hat)),
             (None, self.G_DK_M),
             m
         )
@@ -201,7 +206,8 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.E_DK_M[m] = self.G_DK_M[m]
         self.beta_M[m] = 1. / torch.mean(self.E_DK_M[m])
         data = data if mask is None else data * mask
-        data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
+        # data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
+        data_hat = cp_to_tensor(cp_tensor=(None, self.G_DK_M))
         self.Epsilon_DK_M[m] = self.G_DK_M[m] * unfolding_dot_khatri_rao(
             data / data_hat + self.epsilon,
             (torch.ones(self.K, device=self.device, dtype=torch.float64), self.G_DK_M),
@@ -294,12 +300,15 @@ class BPTF(BaseEstimator, TransformerMixin):
         )
         uttkrp_K = (self.E_DK_M[0] * uttkrp_DK).sum(dim=0)
         bound = -uttkrp_K.sum()
+        assert torch.isfinite(bound), "`bound` became NaN or Inf at first part"
 
-        data_recon = tl.cp_tensor.cp_to_tensor((None, self.G_DK_M))
+        # data_recon = tl.cp_tensor.cp_to_tensor((None, self.G_DK_M))
+        data_recon = cp_to_tensor((None, self.G_DK_M))
         data_recon = data_recon if mask is None else data_recon * mask
         bound += (data * torch.log(
-            data_recon + self.epsilon
+            data_recon.clamp(min=self.epsilon)
         )).sum()
+        assert torch.isfinite(bound), "`bound` became NaN or Inf at second part"
         
         for m in range(self.n_modes):
             bound += self._gamma_bound_term_torch(pa=self.alpha,
@@ -310,6 +319,7 @@ class BPTF(BaseEstimator, TransformerMixin):
                 * self.data_shape[m] \
                 * self.alpha.item() \
                 * torch.log(self.beta_M[m])
+        assert torch.isfinite(bound), "`bound` became NaN or Inf at third part"
         
         return bound
     

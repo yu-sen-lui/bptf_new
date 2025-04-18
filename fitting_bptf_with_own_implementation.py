@@ -75,8 +75,8 @@ if include_mask:
     T_range = np.arange(Y_2000_2018.shape[3])
     D_range = np.arange(Y_2000_2018.shape[4])
 
-    # select_aprils = list(range(3, 12*(2015-2000), 12))
-    select_aprils = list(range(1, 12*(2015-2000), 12)) + list(range(2, 12*(2015-2000), 12)) + list(range(3, 12*(2015-2000), 12))
+    select_aprils = list(range(3, 12*(2015-2000), 12))
+    # select_aprils = list(range(1, 12*(2015-2000), 12)) + list(range(2, 12*(2015-2000), 12)) + list(range(3, 12*(2015-2000), 12))
     GDELT_masked_months = np.array(select_aprils)
     coordinates = np.meshgrid(I_range, I_range, A_range, GDELT_masked_months, np.ones(1))
     flattened_indices = [np.ravel(coords) for coords in coordinates]

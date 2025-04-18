@@ -2,6 +2,8 @@ from tensorly.tenalg.core_tenalg.n_mode_product import multi_mode_dot
 from tensorly.tenalg.core_tenalg._khatri_rao    import khatri_rao
 from tensorly import backend as T
 from tensorly.base import unfold
+from tensorly.base import fold
+import torch
 
 def unfolding_dot_khatri_rao_memory(tensor, cp_tensor, mode):
     """mode-n unfolding times khatri-rao product of factors
@@ -56,3 +58,28 @@ def unfolding_dot_khatri_rao_memory(tensor, cp_tensor, mode):
         return T.stack(mttkrp_parts, axis=1)
     else:
         return T.stack(mttkrp_parts, axis=1) * T.reshape(weights, (1, -1))
+    
+def cp_to_tensor(cp_tensor):
+    """
+    Reconstructs the full tensor using the memory efficient Khatri-Rao product from tensorly
+    Args:
+        cp_tensor: tuple with (weights, factors)
+        weights: list of CP weights
+        factors: list of factor matrices of size (mode dim, rank)
+    Returns:
+        X_hat: the reconstructed tensor
+    """
+    weights, factors = cp_tensor
+    shape = [factor_matrix.shape[0] for factor_matrix in factors]
+    shape = tuple(shape)
+
+    device = 'cpu' if factors[0].get_device() == -1 else 'cuda'
+    mask = torch.ones(shape, dtype=torch.float64, device = device)
+
+    X_0 = unfolding_dot_khatri_rao_memory(
+        tensor=mask,
+        cp_tensor=(weights, factors),
+        mode=0
+    )
+
+    return fold(X_0, 0, shape)
