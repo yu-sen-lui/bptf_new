@@ -175,72 +175,56 @@ for j in range(len(Y.shape)):
 del bptf_5mode
 gc.collect()
 
+fit_with_ALS = False
 # Tensor factorisation with deterministic method ==================================================
-tensorly.set_backend('numpy')
+if fit_with_ALS:
+    print(f'Fitting with ALS')
+    tensorly.set_backend('numpy')
 
-# swap to cpu
-Y_2000_2018 = sparse.COO(Y_2000_2018.cpu().numpy())
-GDELT_mask_2000_2018 = sparse.COO(GDELT_mask_2000_2018.cpu().numpy())
+    # swap to cpu
+    Y_2000_2018 = sparse.COO(Y_2000_2018.cpu().numpy())
+    GDELT_mask_2000_2018 = sparse.COO(GDELT_mask_2000_2018.cpu().numpy())
 
-filepath = 'nntf_parafac_5mode_2000_2018.pkl'
-if os.path.exists(filepath):
-    print(f'{filepath} exists')
-else:
-    print('Fitting with deterministic algorithm')
-    # cp_init = tensorly.cp_tensor.CPTensor(
-    #     tensorly.decomposition._cp.initialize_cp(
-    #         Y_2000_2018, non_negative = True, init = 'random', rank = n_components
-    #         )
-    #     )
-    # tensor_mu, _ = tensorly.decomposition.non_negative_parafac(
-    #     Y_2000_2018, rank=n_components, init=cp_init, return_errors=True,
-    #     verbose = 2, mask=GDELT_mask_2000_2018
-    #     )
-    
-    _, tensor_mu = non_negative_parafac(
-        tensor = Y_2000_2018,
-        rank = n_components,
-        n_iter_max = max_iter,
-        init = 'random',
-        normalize_factors = False,
-        tol = 1e-10,
-        random_state = np.random.RandomState(0),
-        verbose = True,
-        mask = GDELT_mask_2000_2018
-    )
-    
-    with open(filepath, 'wb') as f:
-        pickle.dump(tensor_mu, f)
+    filepath = 'nntf_parafac_5mode_2000_2018.pkl'
+    if os.path.exists(filepath):
+        print(f'{filepath} exists')
+    else:
+        print('Fitting with deterministic algorithm')
+        _, tensor_mu = non_negative_parafac(
+            tensor = Y_2000_2018,
+            rank = n_components,
+            n_iter_max = max_iter,
+            init = 'random',
+            normalize_factors = False,
+            tol = 1e-10,
+            random_state = np.random.RandomState(0),
+            verbose = True,
+            mask = GDELT_mask_2000_2018
+        )
+        
+        with open(filepath, 'wb') as f:
+            pickle.dump(tensor_mu, f)
 
-# swap to cpu
-Y = sparse.COO(Y.cpu().numpy())
-Y_mask = sparse.COO(Y_mask.cpu().numpy())
+    # swap to cpu
+    Y = sparse.COO(Y.cpu().numpy())
+    Y_mask = sparse.COO(Y_mask.cpu().numpy())
 
-filepath = 'nntf_parafac_5mode_2000_2024.pkl'
-if os.path.exists(filepath):
-    print(f'{filepath} exists')
-else:
-    print('Fitting with deterministic algorithm')
-    # cp_init = tensorly.cp_tensor.CPTensor(
-    #     tensorly.decomposition._cp.initialize_cp(
-    #         Y, non_negative = True, init = 'random', rank = n_components
-    #         )
-    #     )
-    # tensor_mu, _ = tensorly.decomposition.non_negative_parafac(
-    #     Y, rank=n_components, init=cp_init, return_errors=True,
-    #     verbose = 2, mask=Y_mask
-    #     )
-    _, tensor_mu = non_negative_parafac(
-        tensor = Y,
-        rank = n_components,
-        n_iter_max = max_iter,
-        init = 'random',
-        normalize_factors = False,
-        tol = 1e-10,
-        random_state = np.random.RandomState(0),
-        verbose = True,
-        mask = Y_mask
-    )
-    
-    with open(filepath, 'wb') as f:
-        pickle.dump(tensor_mu, f)
+    filepath = 'nntf_parafac_5mode_2000_2024.pkl'
+    if os.path.exists(filepath):
+        print(f'{filepath} exists')
+    else:
+        print('Fitting with deterministic algorithm')
+        _, tensor_mu = non_negative_parafac(
+            tensor = Y,
+            rank = n_components,
+            n_iter_max = max_iter,
+            init = 'random',
+            normalize_factors = False,
+            tol = 1e-10,
+            random_state = np.random.RandomState(0),
+            verbose = True,
+            mask = Y_mask
+        )
+        
+        with open(filepath, 'wb') as f:
+            pickle.dump(tensor_mu, f)

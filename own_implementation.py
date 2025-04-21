@@ -166,6 +166,7 @@ class BPTF(BaseEstimator, TransformerMixin):
             (None, self.E_DK_M),
             m
         )
+        self.rte_DK_M[m] = self.rte_DK_M[m].clamp(min=self.epsilon)
 
         # self.shp_DK_M[m] = self.shp_DK_M[m].clamp_(max=1e10)
         # self.rte_DK_M[m] = self.rte_DK_M[m].clamp_(min=self.epsilon, max=1e10)
@@ -181,7 +182,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         # \sum_{(m)} Mean along mode m for Poisson latent sources
         data = data if mask is None else data * mask
         # data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
-        data_hat = cp_to_tensor(cp_tensor=(None, self.G_DK_M))
+        data_hat = cp_to_tensor(cp_tensor=(None, self.G_DK_M)).clamp(min=self.epsilon)
         # data_hat = torch.clamp(data_hat, min=self.epsilon)
         self.Epsilon_DK_M[m] = self.G_DK_M[m] * unfolding_dot_khatri_rao(
             torch.exp(torch.log(data) - torch.log(data_hat)),
@@ -230,6 +231,9 @@ class BPTF(BaseEstimator, TransformerMixin):
         max_iter = kwargs.get('max_iter', 100)
 
         progressbar = tqdm(range(max_iter)) if verbose else range(max_iter)
+        # check for negative elbo change
+        neg_delta_list = []
+        neg_delta_when = []
         for itn in progressbar:
 
             s = time.time()
@@ -245,12 +249,18 @@ class BPTF(BaseEstimator, TransformerMixin):
                 progressbar.set_description(f'ELBO = {bound}, change = {delta}, time taken = {e}')
 
             # check if the change is in the wrong direction
-            assert delta >= 0.0, f"ELBO is negative: {delta}"
+            # assert delta >= 0.0, f"ELBO is negative: {delta}"
+            if delta < 0.0:
+                neg_delta_list.append(delta.item())
+                neg_delta_when.append(itn)
             curr_elbo = bound
             if abs(delta) < kwargs.get('tol', 1e-4):
                 if verbose:
                     progressbar.set_description('Change is small enough, early break')
                 break
+        print(f'Number of negative deltas: {len(neg_delta_list)}')
+        print(f'When do they occur? {neg_delta_when}')
+        print(f'what is their magnitude? {neg_delta_list}')
 
     def _gamma_bound_term_torch(self, pa, pb, qa, qb, compute_constant=False):
         """
@@ -291,7 +301,8 @@ class BPTF(BaseEstimator, TransformerMixin):
         # variational_bound -= (pos_multinomial_prob * torch.log(pos_multinomial_prob)).sum()
 
         # return variational_bound
-
+        
+        no_mask = True if mask is None else False
         mask = torch.ones_like(data, dtype=torch.float64, device=self.device) if mask is None else mask
         uttkrp_DK =  unfolding_dot_khatri_rao(
             mask,
@@ -302,12 +313,29 @@ class BPTF(BaseEstimator, TransformerMixin):
         bound = -uttkrp_K.sum()
         assert torch.isfinite(bound), "`bound` became NaN or Inf at first part"
 
+        # old method for second part
+        # data_recon = cp_to_tensor((None, self.G_DK_M))
+        # data_recon = data_recon if mask is None else data_recon * mask
+        # bound += (data * torch.log(
+        #     data_recon.clamp(min=self.epsilon)
+        # )).sum()
+
         # data_recon = tl.cp_tensor.cp_to_tensor((None, self.G_DK_M))
         data_recon = cp_to_tensor((None, self.G_DK_M))
-        data_recon = data_recon if mask is None else data_recon * mask
-        bound += (data * torch.log(
-            data_recon.clamp(min=self.epsilon)
-        )).sum()
+        # data_recon = data_recon if mask is None else data_recon * mask
+        obs_coords = mask.to(torch.bool).cpu()
+        if no_mask:
+            log_data_recon = torch.log(data_recon.clamp(min=self.epsilon))
+        else:
+            data_recon = data_recon.cpu()
+            data_recon = data_recon[obs_coords].to(self.device).clamp(min=self.epsilon)
+            log_data_recon = torch.log(data_recon)
+
+            data = data.cpu()
+            data = data[obs_coords].to(self.device)
+        bound += (data * 
+                  log_data_recon
+        ).sum()
         assert torch.isfinite(bound), "`bound` became NaN or Inf at second part"
         
         for m in range(self.n_modes):
