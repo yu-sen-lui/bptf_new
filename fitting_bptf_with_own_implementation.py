@@ -25,6 +25,8 @@ import torch
 import tensorly
 import cupy
 
+from tensorly.contrib.sparse.decomposition import non_negative_parafac
+
 import multiprocessing
 from joblib import Parallel, delayed
 from tqdm.contrib.concurrent import process_map
@@ -84,13 +86,15 @@ if include_mask:
     flattened_indices = flattened_indices.astype(np.int64)
     GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y_2000_2018.shape)
     GDELT_mask = (1 - GDELT_mask.todense()).astype(np.int64)
-    GDELT_mask = torch.tensor(GDELT_mask.copy(), dtype=torch.float64, device=device)
+    GDELT_mask_2000_2018 = torch.tensor(GDELT_mask.copy(), dtype=torch.float64, device=device)
+else:
+    GDELT_mask_2000_2018 = None
 
 bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components, device=device)
 filepath = f'bptf_5mode_{max_iter}iter_2000_2018_own_implementation.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
-    bptf_5mode.fit(Y_2000_2018, mask=GDELT_mask, max_iter = max_iter, tol=1e-10, verbose=True)
+    bptf_5mode.fit(Y_2000_2018, mask=GDELT_mask_2000_2018, max_iter = max_iter, tol=1e-10, verbose=True)
     with open(filepath, 'wb') as f:
         pickle.dump(bptf_5mode, f)
 else:
@@ -104,3 +108,139 @@ for j in range(len(Y_2000_2018.shape)):
 
 del bptf_5mode
 gc.collect()
+
+# fitting with mask
+if include_mask:
+    # need to mask unobserved dates for ICEWS and TERRIER
+    # ICEWS is missing data from 2024 (1 year)
+    # TERRIER is missing data from 2019 onwards (5 years)
+    #   database  index
+    # 0    ICEWS      0
+    # 1    GDELT      1
+    # 2  TERRIER      2
+    # ICEWS 
+    I_range = np.arange(Y.shape[0])
+    A_range = np.arange(Y.shape[2])
+    T_range = np.arange(Y.shape[3])
+    D_range = np.arange(Y.shape[4])
+
+    ICEWS_masked_months = np.arange(Y.shape[3])[-12:]
+    coordinates = np.meshgrid(I_range, I_range, A_range, ICEWS_masked_months, np.zeros(1))
+    flattened_indices = [np.ravel(coords) for coords in coordinates]
+    flattened_indices = np.vstack(flattened_indices)
+    flattened_indices = flattened_indices.astype(np.int64)
+    ICEWS_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
+
+    # TERRIER
+    TERRIER_masked_months = np.arange(Y.shape[3])[-5*12:]
+    coordinates = np.meshgrid(I_range, I_range, A_range, TERRIER_masked_months, np.ones(1)*2)
+    flattened_indices = [np.ravel(coords) for coords in coordinates]
+    flattened_indices = np.vstack(flattened_indices)
+    flattened_indices = flattened_indices.astype(np.int64)
+    TERRIER_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
+
+    # For GDELT, we have an issue with GDELT1
+    # GDELT1 spans up to 2014, and April of each year has an abnormally large count, about 5 times the other months
+    select_aprils = list(range(3, 12*(2015-2000), 12))
+    GDELT_masked_months = np.array(select_aprils)
+    coordinates = np.meshgrid(I_range, I_range, A_range, GDELT_masked_months, np.ones(1))
+    flattened_indices = [np.ravel(coords) for coords in coordinates]
+    flattened_indices = np.vstack(flattened_indices)
+    flattened_indices = flattened_indices.astype(np.int64)
+    GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
+
+    Y_mask = ICEWS_mask + TERRIER_mask + GDELT_mask
+    Y_mask = torch.tensor((1 - Y_mask.todense()).astype(np.int64).copy(), dtype=torch.float64, device=device)
+    # check_mask(Y_mask)
+else:
+    Y_mask = None
+
+Y = torch.tensor(Y.todense(), dtype=torch.float64, device=device)
+bptf_5mode = BPTF(data_shape=Y.shape, n_components=n_components, device=device)
+filepath = f'bptf_5mode_{max_iter}iter_2000_2024_own_implementation.pkl'
+if not os.path.exists(filepath):
+    print('Fitting with BPTF')
+    bptf_5mode.fit(Y, max_iter = max_iter, mask=Y_mask, tol=1e-10, verbose=True)
+    with open(filepath, 'wb') as f:
+        pickle.dump(bptf_5mode, f)
+else:
+    print(f'{filepath} exists')
+    with open(filepath, 'rb') as f:
+        bptf_5mode = pickle.load(f)
+
+# check the shapes
+for j in range(len(Y.shape)):
+    assert bptf_5mode.G_DK_M[j].shape == (Y.shape[j], n_components)
+
+del bptf_5mode
+gc.collect()
+
+# Tensor factorisation with deterministic method ==================================================
+tensorly.set_backend('numpy')
+
+# swap to cpu
+Y_2000_2018 = sparse.COO(Y_2000_2018.cpu().numpy())
+GDELT_mask_2000_2018 = sparse.COO(GDELT_mask_2000_2018.cpu().numpy())
+
+filepath = 'nntf_parafac_5mode_2000_2018.pkl'
+if os.path.exists(filepath):
+    print(f'{filepath} exists')
+else:
+    print('Fitting with deterministic algorithm')
+    # cp_init = tensorly.cp_tensor.CPTensor(
+    #     tensorly.decomposition._cp.initialize_cp(
+    #         Y_2000_2018, non_negative = True, init = 'random', rank = n_components
+    #         )
+    #     )
+    # tensor_mu, _ = tensorly.decomposition.non_negative_parafac(
+    #     Y_2000_2018, rank=n_components, init=cp_init, return_errors=True,
+    #     verbose = 2, mask=GDELT_mask_2000_2018
+    #     )
+    
+    _, tensor_mu = non_negative_parafac(
+        tensor = Y_2000_2018,
+        rank = n_components,
+        n_iter_max = max_iter,
+        init = 'random',
+        normalize_factors = False,
+        tol = 1e-10,
+        random_state = np.random.RandomState(0),
+        verbose = True,
+        mask = GDELT_mask_2000_2018
+    )
+    
+    with open(filepath, 'wb') as f:
+        pickle.dump(tensor_mu, f)
+
+# swap to cpu
+Y = sparse.COO(Y.cpu().numpy())
+Y_mask = sparse.COO(Y_mask.cpu().numpy())
+
+filepath = 'nntf_parafac_5mode_2000_2024.pkl'
+if os.path.exists(filepath):
+    print(f'{filepath} exists')
+else:
+    print('Fitting with deterministic algorithm')
+    # cp_init = tensorly.cp_tensor.CPTensor(
+    #     tensorly.decomposition._cp.initialize_cp(
+    #         Y, non_negative = True, init = 'random', rank = n_components
+    #         )
+    #     )
+    # tensor_mu, _ = tensorly.decomposition.non_negative_parafac(
+    #     Y, rank=n_components, init=cp_init, return_errors=True,
+    #     verbose = 2, mask=Y_mask
+    #     )
+    _, tensor_mu = non_negative_parafac(
+        tensor = Y,
+        rank = n_components,
+        n_iter_max = max_iter,
+        init = 'random',
+        normalize_factors = False,
+        tol = 1e-10,
+        random_state = np.random.RandomState(0),
+        verbose = True,
+        mask = Y_mask
+    )
+    
+    with open(filepath, 'wb') as f:
+        pickle.dump(tensor_mu, f)
