@@ -82,6 +82,8 @@ if include_mask:
     GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y_2000_2018.shape)
     # GDELT_mask = (1 - GDELT_mask.todense()).astype(np.int64)
     # GDELT_mask = sparse.COO(GDELT_mask.copy())
+else:
+    GDELT_mask = None
 
 bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components)
 filepath = f'bptf_5mode_{max_iter}iter_2000_2018.pkl'
@@ -151,7 +153,7 @@ bptf_5mode = BPTF(data_shape=Y.shape, n_components=n_components)
 filepath = f'bptf_5mode_{max_iter}iter_2000_2024.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
-    bptf_5mode.fit(Y, max_iter = max_iter, mask=Y_mask,verbose=False)
+    bptf_5mode.fit(Y, max_iter = max_iter, mask=Y_mask,verbose=False, missing_val=1)
     with open(filepath, 'wb') as f:
         pickle.dump(bptf_5mode, f)
 else:

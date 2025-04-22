@@ -323,6 +323,8 @@ class BPTF(BaseEstimator, TransformerMixin):
         # data_recon = tl.cp_tensor.cp_to_tensor((None, self.G_DK_M))
         data_recon = cp_to_tensor((None, self.G_DK_M))
         # data_recon = data_recon if mask is None else data_recon * mask
+        # this part is a computational bottleneck
+        # runtime jumps from about 10s to 30s per iter
         obs_coords = mask.to(torch.bool).cpu()
         if no_mask:
             log_data_recon = torch.log(data_recon.clamp(min=self.epsilon))
