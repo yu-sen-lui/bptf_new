@@ -57,13 +57,13 @@ else:
     print('Not including mask')
 
 # need to enforce self-country actions = 0
-mask = Y.coords[0] != Y.coords[1]
-new_coords = Y.coords[:, mask].copy()
-new_data = Y.data[mask].copy()
-Y = sparse.COO(new_coords, new_data, shape=Y.shape)
+# mask = Y.coords[0] != Y.coords[1]
+# new_coords = Y.coords[:, mask].copy()
+# new_data = Y.data[mask].copy()
+# Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
-n_components = 100
-max_iter = 100
+n_components = 50
+max_iter = 500
 device = 'cuda'
 # fitting an inner join of all 3 datasets
 Y_2000_2018 = torch.tensor(Y[:, :, :, :(12*(2019-2000)), :].todense(), dtype=torch.float64, device=device)
@@ -86,12 +86,14 @@ if include_mask:
     flattened_indices = flattened_indices.astype(np.int64)
     GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y_2000_2018.shape)
     GDELT_mask = (1 - GDELT_mask.todense()).astype(np.int64)
+    # enforce diagonals = 0
+    GDELT_mask[np.eye(GDELT_mask.shape[0]).astype(bool)] = 0
     GDELT_mask_2000_2018 = torch.tensor(GDELT_mask.copy(), dtype=torch.float64, device=device)
 else:
     GDELT_mask_2000_2018 = None
 
 bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components, device=device)
-filepath = f'bptf_5mode_{max_iter}iter_2000_2018_own_implementation.pkl'
+filepath = f'bptf_5mode_{max_iter}iter_{n_components}_components_2000_2018_own_implementation.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
     bptf_5mode.fit(Y_2000_2018, mask=GDELT_mask_2000_2018, max_iter = max_iter, tol=1e-10, verbose=True)
@@ -150,6 +152,9 @@ if include_mask:
     GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
 
     Y_mask = ICEWS_mask + TERRIER_mask + GDELT_mask
+    Y_mask = (1 - Y_mask.todense()).astype(np.int64).copy()
+    # enforce diagonals = 0
+    Y_mask[np.eye(Y_mask.shape[0]).astype(bool)] = 0
     Y_mask = torch.tensor((1 - Y_mask.todense()).astype(np.int64).copy(), dtype=torch.float64, device=device)
     # check_mask(Y_mask)
 else:
@@ -157,7 +162,7 @@ else:
 
 Y = torch.tensor(Y.todense(), dtype=torch.float64, device=device)
 bptf_5mode = BPTF(data_shape=Y.shape, n_components=n_components, device=device)
-filepath = f'bptf_5mode_{max_iter}iter_2000_2024_own_implementation.pkl'
+filepath = f'bptf_5mode_{max_iter}iter_{n_components}_components_2000_2024_own_implementation.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
     bptf_5mode.fit(Y, max_iter = max_iter, mask=Y_mask, tol=1e-10, verbose=True)
