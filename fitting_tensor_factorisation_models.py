@@ -59,8 +59,8 @@ else:
 # new_data = Y.data[mask].copy()
 # Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
-n_components = 100
-max_iter = 100
+n_components = 50
+max_iter = 500
 # fitting an inner join of all 3 datasets
 Y_2000_2018 = Y[:, :, :, :(12*(2019-2000)), :]
 
@@ -90,7 +90,7 @@ else:
     GDELT_mask = None
 
 bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components)
-filepath = f'bptf_5mode_{max_iter}iter_2000_2018.pkl'
+filepath = f'bptf_5mode_{max_iter}_{n_components}_components_iter_2000_2018.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
     bptf_5mode.fit(Y_2000_2018, max_iter = max_iter, mask=GDELT_mask, verbose=True, missing_val=1)
@@ -158,7 +158,7 @@ else:
     Y_mask = None
 
 bptf_5mode = BPTF(data_shape=Y.shape, n_components=n_components)
-filepath = f'bptf_5mode_{max_iter}iter_2000_2024.pkl'
+filepath = f'bptf_5mode_{max_iter}iter_{n_components}_components_2000_2024.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
     bptf_5mode.fit(Y, max_iter = max_iter, mask=Y_mask,verbose=False, missing_val=1)
