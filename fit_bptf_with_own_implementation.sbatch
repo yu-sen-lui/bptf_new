@@ -2,12 +2,12 @@
 ###############################################################################
 # File: run_work.sbatch
 ###############################################################################
-#SBATCH --job-name=bptf_fit         # anything short & descriptive
+#SBATCH --job-name=bptf_fit_with_own_implementation         # anything short & descriptive
 #SBATCH --partition=general            # = -p general
-#SBATCH --gres=gpu:1                   # = --gres=gpu:1
+#SBATCH --gres=gpu:h100:1                   # = --gres=gpu:1
 #SBATCH --cpus-per-task=16             # = --cpus-per-task=16
 #SBATCH --mem=200G                     # = --mem 200000   (200 GB)
-#SBATCH --time=12:00:00                # 600 minutes = 10 hours
+#SBATCH --time=10:00:00                # 600 minutes = 10 hours
 #SBATCH --output=%x_%j.out             # stdout ➜ bptf_and_nb_<jobid>.out
 #SBATCH --error=%x_%j.err              # stderr ➜ bptf_and_nb_<jobid>.err
 # (optional) e-mail on end / fail
@@ -34,7 +34,7 @@ export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
 # Using "srun" inside the allocation guarantees proper I/O buffering & GPU bind.
 # They run SEQUENTIALLY here; put "&" after a command if you want concurrency.
 
-echo "python fitting_tensor_factorisation_models.py"
-srun --exclusive python fitting_tensor_factorisation_models.py
+echo "python fitting_bptf_with_own_implementation.py"
+srun --exclusive python fitting_bptf_with_own_implementation.py
 
 echo "Finished at $(date)"

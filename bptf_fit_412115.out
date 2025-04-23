@@ -1,0 +1,9 @@
+Running on i001-ds   at Tue Apr 22 10:44:01 PM CDT 2025
+SLURM_JOB_ID = 412115
+python fitting_tensor_factorisation_models.py
+<IPython.core.display.Javascript object>
+Kernel is restarting...
+/home/luiyusen/projects/bptf_new
+Including mask
+Fitting with BPTF
+ITERATION 0:	Time: 0.000000	Objective: -53094739586.45	Change: nan	

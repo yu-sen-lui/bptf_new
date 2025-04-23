@@ -80,10 +80,9 @@ if include_mask:
     flattened_indices = np.vstack(flattened_indices)
     flattened_indices = flattened_indices.astype(np.int64)
     GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y_2000_2018.shape)
-    diagonal_mask = np.zeros(Y_2000_2018.shape)
-    diagonal_mask[np.eye(diagonal_mask.shape[0])] = 1
-    GDELT_mask += sparse.COO(diagonal_mask)
-    del diagonal_mask
+    GDELT_mask = GDELT_mask.todense()
+    GDELT_mask[np.eye(GDELT_mask.shape[0]).astype(bool)] = 1
+    GDELT_mask = sparse.COO(GDELT_mask.astype(np.int64))
     # GDELT_mask = (1 - GDELT_mask.todense()).astype(np.int64)
     # GDELT_mask = sparse.COO(GDELT_mask.copy())
 else:
@@ -149,10 +148,9 @@ if include_mask:
     GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
 
     Y_mask = ICEWS_mask + TERRIER_mask + GDELT_mask
-    diagonal_mask = np.zeros(Y.shape)
-    diagonal_mask[np.eye(diagonal_mask.shape[0])] = 1
-    Y_mask += sparse.COO(diagonal_mask)
-    del diagonal_mask
+    Y_mask = Y_mask.todense()
+    Y_mask[np.eye(Y_mask.shape[0]).astype(bool)] = 1
+    Y_mask = sparse.COO(Y_mask.astype(np.int64))
     check_mask(Y_mask)
 else:
     Y_mask = None
