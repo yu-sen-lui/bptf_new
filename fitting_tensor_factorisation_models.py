@@ -60,7 +60,7 @@ else:
 # Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
 n_components = 50
-max_iter = 500
+max_iter = 100
 # fitting an inner join of all 3 datasets
 Y_2000_2018 = Y[:, :, :, :(12*(2019-2000)), :]
 

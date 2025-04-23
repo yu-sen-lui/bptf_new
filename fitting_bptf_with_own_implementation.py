@@ -64,6 +64,7 @@ else:
 
 n_components = 50
 max_iter = 500
+tol = 1e-4
 device = 'cuda'
 # fitting an inner join of all 3 datasets
 Y_2000_2018 = torch.tensor(Y[:, :, :, :(12*(2019-2000)), :].todense(), dtype=torch.float64, device=device)
@@ -96,7 +97,7 @@ bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components, devic
 filepath = f'bptf_5mode_{max_iter}iter_{n_components}_components_2000_2018_own_implementation.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
-    bptf_5mode.fit(Y_2000_2018, mask=GDELT_mask_2000_2018, max_iter = max_iter, tol=1e-10, verbose=True)
+    bptf_5mode.fit(Y_2000_2018, mask=GDELT_mask_2000_2018, max_iter = max_iter, tol=tol, verbose=True)
     with open(filepath, 'wb') as f:
         pickle.dump(bptf_5mode, f)
 else:
@@ -165,7 +166,7 @@ bptf_5mode = BPTF(data_shape=Y.shape, n_components=n_components, device=device)
 filepath = f'bptf_5mode_{max_iter}iter_{n_components}_components_2000_2024_own_implementation.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
-    bptf_5mode.fit(Y, max_iter = max_iter, mask=Y_mask, tol=1e-10, verbose=True)
+    bptf_5mode.fit(Y, max_iter = max_iter, mask=Y_mask, tol=tol, verbose=True)
     with open(filepath, 'wb') as f:
         pickle.dump(bptf_5mode, f)
 else:
