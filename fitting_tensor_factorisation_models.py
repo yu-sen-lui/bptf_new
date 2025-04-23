@@ -54,10 +54,10 @@ else:
     print('Not including mask')
 
 # need to enforce self-country actions = 0
-mask = Y.coords[0] != Y.coords[1]
-new_coords = Y.coords[:, mask].copy()
-new_data = Y.data[mask].copy()
-Y = sparse.COO(new_coords, new_data, shape=Y.shape)
+# mask = Y.coords[0] != Y.coords[1]
+# new_coords = Y.coords[:, mask].copy()
+# new_data = Y.data[mask].copy()
+# Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
 n_components = 100
 max_iter = 100
@@ -80,6 +80,10 @@ if include_mask:
     flattened_indices = np.vstack(flattened_indices)
     flattened_indices = flattened_indices.astype(np.int64)
     GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y_2000_2018.shape)
+    diagonal_mask = np.zeros(Y_2000_2018.shape)
+    diagonal_mask[np.eye(diagonal_mask.shape[0])] = 1
+    GDELT_mask += sparse.COO(diagonal_mask)
+    del diagonal_mask
     # GDELT_mask = (1 - GDELT_mask.todense()).astype(np.int64)
     # GDELT_mask = sparse.COO(GDELT_mask.copy())
 else:
@@ -145,6 +149,10 @@ if include_mask:
     GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
 
     Y_mask = ICEWS_mask + TERRIER_mask + GDELT_mask
+    diagonal_mask = np.zeros(Y.shape)
+    diagonal_mask[np.eye(diagonal_mask.shape[0])] = 1
+    Y_mask += sparse.COO(diagonal_mask)
+    del diagonal_mask
     check_mask(Y_mask)
 else:
     Y_mask = None
