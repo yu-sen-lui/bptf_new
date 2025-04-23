@@ -63,7 +63,7 @@ else:
 # Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
 n_components = 50
-max_iter = 500
+max_iter = 100
 tol = 1e-4
 device = 'cuda'
 # fitting an inner join of all 3 datasets

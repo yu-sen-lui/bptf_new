@@ -325,19 +325,28 @@ class BPTF(BaseEstimator, TransformerMixin):
         # data_recon = data_recon if mask is None else data_recon * mask
         # this part is a computational bottleneck
         # runtime jumps from about 10s to 30s per iter
-        obs_coords = mask.to(torch.bool).cpu()
+        # obs_coords = mask.to(torch.bool).cpu()
+        # if no_mask:
+        #     log_data_recon = torch.log(data_recon.clamp(min=self.epsilon))
+        # else:
+        #     data_recon = data_recon.cpu()
+        #     data_recon = data_recon[obs_coords].to(self.device).clamp(min=self.epsilon)
+        #     log_data_recon = torch.log(data_recon)
+
+        #     data = data.cpu()
+        #     data = data[obs_coords].to(self.device)
+        # bound += (data * 
+        #           log_data_recon
+        # ).sum()
         if no_mask:
             log_data_recon = torch.log(data_recon.clamp(min=self.epsilon))
         else:
-            data_recon = data_recon.cpu()
-            data_recon = data_recon[obs_coords].to(self.device).clamp(min=self.epsilon)
+            obs_coords = mask.to(torch.bool)
+            data = torch.masked_select(data, obs_coords)
+            data_recon = torch.masked_select(data, obs_coords).clamp(min=self.epsilon)
             log_data_recon = torch.log(data_recon)
+        bound += (data * log_data_recon).sum()
 
-            data = data.cpu()
-            data = data[obs_coords].to(self.device)
-        bound += (data * 
-                  log_data_recon
-        ).sum()
         assert torch.isfinite(bound), "`bound` became NaN or Inf at second part"
         
         for m in range(self.n_modes):
