@@ -64,7 +64,7 @@ else:
 
 n_components = 50
 max_iter = 100
-tol = 1e-4
+tol = 1e-10
 device = 'cuda'
 # fitting an inner join of all 3 datasets
 Y_2000_2018 = torch.tensor(Y[:, :, :, :(12*(2019-2000)), :].todense(), dtype=torch.float64, device=device)
