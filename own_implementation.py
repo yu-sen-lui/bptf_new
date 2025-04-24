@@ -9,6 +9,8 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from tensor_utility_functions import unfolding_dot_khatri_rao_memory as unfolding_dot_khatri_rao
 from tensorly.cp_tensor import cp_to_tensor
 
+import matplotlib.pyplot as plt
+
 torch.set_default_dtype(torch.float64)
 torch.backends.cuda.matmul.allow_tf32 = False
 
@@ -34,6 +36,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.data_shape = data_shape
         self.n_modes = len(data_shape)
         self.K = n_components
+        self.n_components = n_components
 
         # hyperparameters
         self.beta_M = torch.ones(self.n_modes, dtype=torch.float64, device=device)
@@ -154,6 +157,17 @@ class BPTF(BaseEstimator, TransformerMixin):
             data: data tensor, torch tensor with same device as self.device
             mask: binary tensor with same shape as data tensor, 1 for observed
         """
+
+        # \sum_{(m)} Mean along mode m for Poisson latent sources
+        data = data if mask is None else data * mask
+        data_hat = cp_to_tensor(cp_tensor=(None, self.G_DK_M))
+        # data_hat = torch.clamp(data_hat, min=self.epsilon)
+        self.Epsilon_DK_M[m] = self.G_DK_M[m] * unfolding_dot_khatri_rao(
+            data / data_hat,
+            (None, self.G_DK_M),
+            m
+        )
+
         if mask is None:
             mask = torch.ones(self.data_shape, device=self.device, dtype=torch.float64)
         
@@ -166,7 +180,7 @@ class BPTF(BaseEstimator, TransformerMixin):
             (None, self.E_DK_M),
             m
         )
-        self.rte_DK_M[m] = self.rte_DK_M[m].clamp(min=self.epsilon)
+        # self.rte_DK_M[m] = self.rte_DK_M[m].clamp(min=self.epsilon)
 
         # self.shp_DK_M[m] = self.shp_DK_M[m].clamp_(max=1e10)
         # self.rte_DK_M[m] = self.rte_DK_M[m].clamp_(min=self.epsilon, max=1e10)
@@ -179,16 +193,6 @@ class BPTF(BaseEstimator, TransformerMixin):
             data: torch tensor,
             mask: binary torch tensor of the same dimensions as data. 1 is for observed data, 0 for unobserved
         """
-        # \sum_{(m)} Mean along mode m for Poisson latent sources
-        data = data if mask is None else data * mask
-        # data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
-        data_hat = cp_to_tensor(cp_tensor=(None, self.G_DK_M)).clamp(min=self.epsilon)
-        # data_hat = torch.clamp(data_hat, min=self.epsilon)
-        self.Epsilon_DK_M[m] = self.G_DK_M[m] * unfolding_dot_khatri_rao(
-            torch.exp(torch.log(data) - torch.log(data_hat)),
-            (None, self.G_DK_M),
-            m
-        )
         self.G_DK_M[m] = torch.exp(torch.digamma(self.shp_DK_M[m]) - torch.log(self.rte_DK_M[m]))
         self.E_DK_M[m] = self.shp_DK_M[m] / self.rte_DK_M[m]
 
@@ -234,13 +238,14 @@ class BPTF(BaseEstimator, TransformerMixin):
         # check for negative elbo change
         neg_delta_list = []
         neg_delta_when = []
+        elbo_list = [curr_elbo.item()]
         for itn in progressbar:
 
             s = time.time()
             for m in modes:
                 self._update_variational_params(m, data, mask)
                 self._update_cache(m, data, mask)
-                self._update_beta(m)
+                # self._update_beta(m)
                 self._check_mode(m)
             bound = self._elbo(data, mask)
             delta = (bound - curr_elbo) / abs(curr_elbo)
@@ -250,9 +255,12 @@ class BPTF(BaseEstimator, TransformerMixin):
 
             # check if the change is in the wrong direction
             # assert delta >= 0.0, f"ELBO is negative: {delta}"
+            elbo_list.append(bound.item())
             if delta < 0.0:
                 neg_delta_list.append(delta.item())
                 neg_delta_when.append(itn)
+            # for m in modes:
+            #     self._update_beta(m)
             curr_elbo = bound
             if abs(delta) < kwargs.get('tol', 1e-4):
                 if verbose:
@@ -261,6 +269,11 @@ class BPTF(BaseEstimator, TransformerMixin):
         print(f'Number of negative deltas: {len(neg_delta_list)}')
         print(f'When do they occur? {neg_delta_when}')
         print(f'what is their magnitude? {neg_delta_list}')
+        print(f'List of elbos: {elbo_list}')
+        plt.plot(list(range(len(elbo_list))), elbo_list)
+        plt.xlabel('Iter')
+        plt.ylabel('Variational bound')
+        plt.show()
 
     def _gamma_bound_term_torch(self, pa, pb, qa, qb, compute_constant=False):
         """
@@ -343,7 +356,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         else:
             obs_coords = mask.to(torch.bool)
             data = torch.masked_select(data, obs_coords)
-            data_recon = torch.masked_select(data, obs_coords).clamp(min=self.epsilon)
+            data_recon = torch.masked_select(data_recon, obs_coords).clamp(min=self.epsilon)
             log_data_recon = torch.log(data_recon)
         bound += (data * log_data_recon).sum()
 
@@ -353,11 +366,12 @@ class BPTF(BaseEstimator, TransformerMixin):
             bound += self._gamma_bound_term_torch(pa=self.alpha,
                                                   pb=self.alpha * self.beta_M[m],
                                                   qa=self.shp_DK_M[m],
-                                                  qb=self.rte_DK_M[m]).sum()
+                                                  qb=self.rte_DK_M[m],
+                                                  compute_constant=True).sum()
             bound += self.K \
                 * self.data_shape[m] \
                 * self.alpha.item() \
-                * torch.log(self.beta_M[m])
+                * torch.log(self.beta_M[m].clamp(min=self.epsilon))
         assert torch.isfinite(bound), "`bound` became NaN or Inf at third part"
         
         return bound
