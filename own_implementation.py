@@ -259,8 +259,8 @@ class BPTF(BaseEstimator, TransformerMixin):
             if delta < 0.0:
                 neg_delta_list.append(delta.item())
                 neg_delta_when.append(itn)
-            # for m in modes:
-            #     self._update_beta(m)
+            for m in modes:
+                self._update_beta(m)
             curr_elbo = bound
             if abs(delta) < kwargs.get('tol', 1e-4):
                 if verbose:
