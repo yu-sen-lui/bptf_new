@@ -242,6 +242,9 @@ class BPTF(BaseEstimator, TransformerMixin):
         for itn in progressbar:
 
             s = time.time()
+
+            curr_elbo = self._elbo(data, mask)
+
             for m in modes:
                 self._update_variational_params(m, data, mask)
                 self._update_cache(m, data, mask)
