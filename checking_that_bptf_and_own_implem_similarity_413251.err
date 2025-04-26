@@ -1,4 +1,0 @@
-Input Notebook:  checking_that_bptf_and_own_implem_similarity.ipynb
-Output Notebook: checking_that_bptf_and_own_implem_similarity.ipynb
-Executing:   0%|          | 0/13 [00:00<?, ?cell/s]Executing notebook with kernel: python3
-Executing:   8%|▊         | 1/13 [01:02<12:34, 62.86s/cell]Executing:  38%|███▊      | 5/13 [01:05<01:19,  9.93s/cell]Executing:  46%|████▌     | 6/13 [01:05<00:53,  7.64s/cell]Executing:  54%|█████▍    | 7/13 [2:56:26<4:23:24, 2634.09s/cell]Executing:  62%|██████▏   | 8/13 [2:56:27<2:41:46, 1941.34s/cell]Executing:  69%|██████▉   | 9/13 [2:56:34<1:34:12, 1413.05s/cell]Executing:  77%|███████▋  | 10/13 [2:58:12<52:12, 1044.01s/cell] Executing:  85%|████████▍ | 11/13 [2:58:12<24:50, 745.29s/cell] Executing:  92%|█████████▏| 12/13 [2:58:13<08:49, 529.18s/cell]Executing: 100%|██████████| 13/13 [2:58:15<00:00, 374.91s/cell]Executing: 100%|██████████| 13/13 [2:58:19<00:00, 823.06s/cell]
