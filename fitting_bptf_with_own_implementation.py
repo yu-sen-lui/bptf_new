@@ -63,8 +63,8 @@ else:
 # Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
 n_components = 50
-max_iter = 100
-tol = 1e-10
+max_iter = 500
+tol = 1e-8
 device = 'cuda'
 # fitting an inner join of all 3 datasets
 Y_2000_2018 = torch.tensor(Y[:, :, :, :(12*(2019-2000)), :].todense(), dtype=torch.float64, device=device)
@@ -80,16 +80,25 @@ if include_mask:
 
     select_aprils = list(range(3, 12*(2015-2000), 12))
     # select_aprils = list(range(1, 12*(2015-2000), 12)) + list(range(2, 12*(2015-2000), 12)) + list(range(3, 12*(2015-2000), 12))
-    GDELT_masked_months = np.array(select_aprils)
-    coordinates = np.meshgrid(I_range, I_range, A_range, GDELT_masked_months, np.ones(1))
-    flattened_indices = [np.ravel(coords) for coords in coordinates]
-    flattened_indices = np.vstack(flattened_indices)
-    flattened_indices = flattened_indices.astype(np.int64)
-    GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y_2000_2018.shape)
-    GDELT_mask = (1 - GDELT_mask.todense()).astype(np.int64)
-    # enforce diagonals = 0
-    GDELT_mask[np.eye(GDELT_mask.shape[0]).astype(bool)] = 0
-    GDELT_mask_2000_2018 = torch.tensor(GDELT_mask.copy(), dtype=torch.float64, device=device)
+    # GDELT_masked_months = np.array(select_aprils)
+    # coordinates = np.meshgrid(I_range, I_range, A_range, GDELT_masked_months, np.ones(1))
+    # flattened_indices = [np.ravel(coords) for coords in coordinates]
+    # flattened_indices = np.vstack(flattened_indices)
+    # flattened_indices = flattened_indices.astype(np.int64)
+    # GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y_2000_2018.shape)
+    # GDELT_mask = (1 - GDELT_mask.todense()).astype(np.int64)
+    # # enforce diagonals = 0
+    # GDELT_mask[np.eye(GDELT_mask.shape[0]).astype(bool)] = 0
+    # GDELT_mask_2000_2018 = torch.tensor(GDELT_mask.copy(), dtype=torch.float64, device=device)
+
+    # elements set to 0:
+    # aprils up to 2015 for GDELT
+    # diagonals
+    GDELT_mask_2000_2018 = np.ones(Y_2000_2018.shape)
+    GDELT_mask_2000_2018[:, :, :, select_aprils, 1] = 0
+    GDELT_mask_2000_2018[np.eye(GDELT_mask_2000_2018.shape[0])] = 0
+    GDELT_mask_2000_2018 = GDELT_mask_2000_2018.astype(np.int64)
+    GDELT_mask_2000_2018 = torch.tensor(GDELT_mask_2000_2018, dtype=torch.float64, device=device)
 else:
     GDELT_mask_2000_2018 = None
 
@@ -132,7 +141,7 @@ if include_mask:
     flattened_indices = [np.ravel(coords) for coords in coordinates]
     flattened_indices = np.vstack(flattened_indices)
     flattened_indices = flattened_indices.astype(np.int64)
-    ICEWS_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
+    ICEWS_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)    
 
     # TERRIER
     TERRIER_masked_months = np.arange(Y.shape[3])[-5*12:]
