@@ -19,6 +19,15 @@ torch.backends.cuda.matmul.allow_tf32 = False
 # tl.tenalg.register_backend_method("unfolding_dot_khatri_rao", unfolding_dot_khatri_rao_memory)
 # tl.tenalg.use_dynamic_dispatch()
 
+def kahan_diff(a, b):
+    """
+    Stable method of a-b \approx 0
+    """
+    diff = a - b
+    tmp  = diff - a
+    corr = (a - (diff - tmp)) + (b + tmp)
+    return diff + corr
+
 class BPTF(BaseEstimator, TransformerMixin):
     def __init__(self, data_shape, n_components, alpha = 0.1, device="cpu"):
         """
@@ -243,7 +252,7 @@ class BPTF(BaseEstimator, TransformerMixin):
 
             s = time.time()
 
-            curr_elbo = self._elbo(data, mask)
+            # curr_elbo = self._elbo(data, mask)
 
             for m in modes:
                 self._update_variational_params(m, data, mask)
@@ -251,10 +260,12 @@ class BPTF(BaseEstimator, TransformerMixin):
                 # self._update_beta(m)
                 self._check_mode(m)
             bound = self._elbo(data, mask)
-            delta = (bound - curr_elbo) / abs(curr_elbo)
+            # delta = (bound - curr_elbo) / abs(curr_elbo)
+            delta = kahan_diff(bound, curr_elbo) / abs(curr_elbo)
+            
             if verbose:
                 e = time.time() - s
-                progressbar.set_description(f'ELBO = {bound}, change = {delta}, time taken = {e}')
+                progressbar.set_description(f'ELBO = {bound: .3f}, change = {delta: .3}, time taken = {e: .3}')
 
             # check if the change is in the wrong direction
             # assert delta >= 0.0, f"ELBO is negative: {delta}"
@@ -276,6 +287,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         plt.plot(list(range(len(elbo_list))), elbo_list)
         plt.xlabel('Iter')
         plt.ylabel('Variational bound')
+        plt.yscale('log')
         plt.show()
 
     def _gamma_bound_term_torch(self, pa, pb, qa, qb, compute_constant=False):
