@@ -1,0 +1,11 @@
+  0%|          | 0/500 [00:00<?, ?it/s]ELBO = -134736232.927, change =  0.998, time taken =  2.38:   0%|          | 0/500 [00:02<?, ?it/s]ELBO = -134736232.927, change =  0.998, time taken =  2.38:   0%|          | 1/500 [00:02<19:49,  2.38s/it]ELBO = -114582940.205, change =  0.15, time taken =  2.39:   0%|          | 1/500 [00:04<19:49,  2.38s/it] ELBO = -114582940.205, change =  0.15, time taken =  2.39:   0%|          | 2/500 [00:04<19:48,  2.39s/it]ELBO = -44828028.674, change =  0.609, time taken =  2.39:   0%|          | 2/500 [00:07<19:48,  2.39s/it]ELBO = -44828028.674, change =  0.609, time taken =  2.39:   1%|          | 3/500 [00:07<19:46,  2.39s/it]ELBO = -31695214.283, change =  0.293, time taken =  2.39:   1%|          | 3/500 [00:09<19:46,  2.39s/it]ELBO = -31695214.283, change =  0.293, time taken =  2.39:   1%|          | 4/500 [00:09<19:43,  2.39s/it]ELBO = -36706719.284, change = -0.158, time taken =  2.39:   1%|          | 4/500 [00:11<19:43,  2.39s/it]ELBO = -36706719.284, change = -0.158, time taken =  2.39:   1%|          | 4/500 [00:11<24:40,  2.98s/it]
+Traceback (most recent call last):
+  File "/home/luiyusen/projects/bptf_new/fitting_bptf_with_own_implementation.py", line 109, in <module>
+    bptf_5mode.fit(Y_2000_2018, mask=GDELT_mask_2000_2018, max_iter = max_iter, tol=tol, verbose=True)
+  File "/home/luiyusen/projects/bptf_new/own_implementation.py", line 395, in fit
+    self._update(data, mask, None, **kwargs)
+  File "/home/luiyusen/projects/bptf_new/own_implementation.py", line 263, in _update
+    assert delta >= 0.0, f"ELBO is negative: {delta}"
+           ^^^^^^^^^^^^
+AssertionError: ELBO is negative: -0.1581155109441662
+srun: error: m001: task 0: Exited with exit code 1

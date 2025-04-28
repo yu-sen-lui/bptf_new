@@ -7,6 +7,7 @@ import tensorly as tl
 tl.set_backend('pytorch')
 from sklearn.base import BaseEstimator, TransformerMixin
 from tensor_utility_functions import unfolding_dot_khatri_rao_memory as unfolding_dot_khatri_rao
+from tensor_utility_functions import kahan_diff, is_binary
 from tensorly.cp_tensor import cp_to_tensor
 
 import matplotlib.pyplot as plt
@@ -18,15 +19,6 @@ torch.backends.cuda.matmul.allow_tf32 = False
 # from tensorly.tenalg.core_tenalg.mttkrp import unfolding_dot_khatri_rao_memory
 # tl.tenalg.register_backend_method("unfolding_dot_khatri_rao", unfolding_dot_khatri_rao_memory)
 # tl.tenalg.use_dynamic_dispatch()
-
-def kahan_diff(a, b):
-    """
-    Stable method of a-b \approx 0
-    """
-    diff = a - b
-    tmp  = diff - a
-    corr = (a - (diff - tmp)) + (b + tmp)
-    return diff + corr
 
 class BPTF(BaseEstimator, TransformerMixin):
     def __init__(self, data_shape, n_components, alpha = 0.1, device="cpu"):
@@ -268,7 +260,7 @@ class BPTF(BaseEstimator, TransformerMixin):
                 progressbar.set_description(f'ELBO = {bound: .3f}, change = {delta: .3}, time taken = {e: .3}')
 
             # check if the change is in the wrong direction
-            # assert delta >= 0.0, f"ELBO is negative: {delta}"
+            assert delta >= 0.0, f"ELBO is negative: {delta}"
             elbo_list.append(bound.item())
             if delta < 0.0:
                 neg_delta_list.append(delta.item())
@@ -396,6 +388,8 @@ class BPTF(BaseEstimator, TransformerMixin):
         Call this to fit the model to the given data and mask
         """
         assert data.shape == self.data_shape, f"Expected shape {self.data_shape} but got {data.shape}"
+        if mask is not None:
+            assert is_binary(mask), 'Mask is not binary'
 
         self._init()
         self._update(data, mask, None, **kwargs)

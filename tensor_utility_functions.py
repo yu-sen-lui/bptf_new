@@ -59,27 +59,14 @@ def unfolding_dot_khatri_rao_memory(tensor, cp_tensor, mode):
     else:
         return T.stack(mttkrp_parts, axis=1) * T.reshape(weights, (1, -1))
     
-def cp_to_tensor(cp_tensor):
+def is_binary(x: torch.Tensor) -> bool:
+    return torch.all((x == 0) | (x == 1)).item()
+
+def kahan_diff(a, b):
     """
-    Reconstructs the full tensor using the memory efficient Khatri-Rao product from tensorly
-    Args:
-        cp_tensor: tuple with (weights, factors)
-        weights: list of CP weights
-        factors: list of factor matrices of size (mode dim, rank)
-    Returns:
-        X_hat: the reconstructed tensor
+    Stable method of a-b \approx 0
     """
-    weights, factors = cp_tensor
-    shape = [factor_matrix.shape[0] for factor_matrix in factors]
-    shape = tuple(shape)
-
-    device = 'cpu' if factors[0].get_device() == -1 else 'cuda'
-    mask = torch.ones(shape, dtype=torch.float64, device = device)
-
-    X_0 = unfolding_dot_khatri_rao_memory(
-        tensor=mask,
-        cp_tensor=(weights, factors),
-        mode=0
-    )
-
-    return fold(X_0, 0, shape)
+    diff = a - b
+    tmp  = diff - a
+    corr = (a - (diff - tmp)) + (b + tmp)
+    return diff + corr

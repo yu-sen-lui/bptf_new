@@ -1,0 +1,6 @@
+Input Notebook:  checking_that_bptf_and_own_implem_similarity.ipynb
+Output Notebook: checking_that_bptf_and_own_implem_similarity.ipynb
+Executing:   0%|          | 0/15 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+srun: Job step aborted: Waiting up to 63 seconds for job step to finish.
+slurmstepd-g004: error: *** JOB 414818 ON g004 CANCELLED AT 2025-04-28T16:08:38 ***
+Executing:   7%|▋         | 1/15 [00:06<01:34,  6.73s/cell]slurmstepd-g004: error: *** STEP 414818.0 ON g004 CANCELLED AT 2025-04-28T16:08:38 ***
