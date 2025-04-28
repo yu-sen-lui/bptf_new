@@ -64,7 +64,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.G_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
 
         # small positive number to prevent division by 0
-        self.epsilon = 1e-10
+        self.epsilon = 0
 
     def reconstruct(self, mask=None, drop_diag=False, fill_value = 0, style='arithmetic'):
         """

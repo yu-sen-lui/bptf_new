@@ -64,7 +64,7 @@ else:
 
 n_components = 50
 max_iter = 500
-tol = 1e-8
+tol = 1e-6
 device = 'cuda'
 # fitting an inner join of all 3 datasets
 Y_2000_2018 = torch.tensor(Y[:, :, :, :(12*(2019-2000)), :].todense(), dtype=torch.float64, device=device)
@@ -96,7 +96,7 @@ if include_mask:
     # diagonals
     GDELT_mask_2000_2018 = np.ones(Y_2000_2018.shape)
     GDELT_mask_2000_2018[:, :, :, select_aprils, 1] = 0
-    GDELT_mask_2000_2018[np.eye(GDELT_mask_2000_2018.shape[0])] = 0
+    GDELT_mask_2000_2018[np.eye(GDELT_mask_2000_2018.shape[0]).astype(bool)] = 0
     GDELT_mask_2000_2018 = GDELT_mask_2000_2018.astype(np.int64)
     GDELT_mask_2000_2018 = torch.tensor(GDELT_mask_2000_2018, dtype=torch.float64, device=device)
 else:
