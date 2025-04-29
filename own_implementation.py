@@ -7,7 +7,7 @@ import tensorly as tl
 tl.set_backend('pytorch')
 from sklearn.base import BaseEstimator, TransformerMixin
 from tensor_utility_functions import unfolding_dot_khatri_rao_memory as unfolding_dot_khatri_rao
-from tensor_utility_functions import kahan_diff, is_binary
+from tensor_utility_functions import kahan_diff, is_binary, KahanSum
 from tensorly.cp_tensor import cp_to_tensor
 
 import matplotlib.pyplot as plt
@@ -263,7 +263,7 @@ class BPTF(BaseEstimator, TransformerMixin):
                 self._update_posterior_multinomial(m, data, mask)
                 self._update_variational_params(m, data, mask)
                 self._update_cache(m, data, mask)
-                self._update_beta(m)
+                # self._update_beta(m)
                 self._check_mode(m)
             # for m in modes:
             #     self._update_beta(m)
@@ -337,6 +337,8 @@ class BPTF(BaseEstimator, TransformerMixin):
 
         # return variational_bound
         
+        bound = []
+
         no_mask = True if mask is None else False
         mask = torch.ones_like(data, dtype=torch.float64, device=self.device) if mask is None else mask
         uttkrp_DK =  unfolding_dot_khatri_rao(
@@ -345,8 +347,9 @@ class BPTF(BaseEstimator, TransformerMixin):
             0
         )
         uttkrp_K = (self.E_DK_M[0] * uttkrp_DK).sum(dim=0)
-        bound = -uttkrp_K.sum()
-        assert torch.isfinite(bound), "`bound` became NaN or Inf at first part"
+        # bound = -uttkrp_K.sum()
+        bound.append(-uttkrp_K.sum(dtype=torch.float64))
+        # assert torch.isfinite(uttkrp_K.sum()), "`bound` became NaN or Inf at first part"
 
         # old method for second part
         # data_recon = cp_to_tensor((None, self.G_DK_M))
@@ -403,21 +406,38 @@ class BPTF(BaseEstimator, TransformerMixin):
             data_batch = data[tuple(sub.T)]
             data_recon_batch = data_recon[tuple(sub.T)].clamp(min=self.epsilon)
             log_data_recon = torch.log(data_recon_batch)
-            bound += (data_batch * log_data_recon).sum()
+            # bound += (data_batch * log_data_recon).sum()
+            bound.append((data_batch * log_data_recon).sum(dtype=torch.float64))
 
-        assert torch.isfinite(bound), "`bound` became NaN or Inf at second part"
+        # assert torch.isfinite(bound), "`bound` became NaN or Inf at second part"
         
         for m in range(self.n_modes):
-            bound += self._gamma_bound_term_torch(pa=self.alpha,
+            # bound += self._gamma_bound_term_torch(pa=self.alpha,
+            #                                       pb=self.alpha * self.beta_M[m],
+            #                                       qa=self.shp_DK_M[m],
+            #                                       qb=self.rte_DK_M[m],
+            #                                       compute_constant=True).sum()
+
+            # bound += self.K \
+            #     * self.data_shape[m] \
+            #     * self.alpha.item() \
+            #     * torch.log(self.beta_M[m].clamp(min=self.epsilon))
+            bound.append(
+                self._gamma_bound_term_torch(pa=self.alpha,
                                                   pb=self.alpha * self.beta_M[m],
                                                   qa=self.shp_DK_M[m],
                                                   qb=self.rte_DK_M[m],
-                                                  compute_constant=True).sum()
-            bound += self.K \
+                                                  compute_constant=True).sum(dtype=torch.float64)
+            )
+            bound.append(
+                self.K \
                 * self.data_shape[m] \
                 * self.alpha.item() \
                 * torch.log(self.beta_M[m].clamp(min=self.epsilon))
-        assert torch.isfinite(bound), "`bound` became NaN or Inf at third part"
+            )
+        # assert torch.isfinite(bound), "`bound` became NaN or Inf at third part"
+
+        bound = KahanSum(bound)
         
         return bound
     

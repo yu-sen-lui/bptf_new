@@ -70,3 +70,26 @@ def kahan_diff(a, b):
     tmp  = diff - a
     corr = (a - (diff - tmp)) + (b + tmp)
     return diff + corr
+
+def KahanSum(input):
+    """
+    Does input.sum safely using Kahan summation
+    Algorithm taken from wikipedia
+    Args:
+        input: list of summable iterables
+    Returns:
+        sum(input)
+    """
+    # accumulator
+    sum = 0.0
+    # running compensation for lost low-order bits
+    c = 0.0
+
+    for i in range(len(input)):
+        # c is 0 the first time around
+        y = input[i] - c
+        t = sum + y
+        c = (t - sum) - y
+        sum = t
+
+    return sum
