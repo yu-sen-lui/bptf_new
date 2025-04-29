@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 torch.set_default_dtype(torch.float64)
 torch.backends.cuda.matmul.allow_tf32 = False
+torch.manual_seed(0)
 
 # switching to memory efficient mttkrp
 # from tensorly.tenalg.core_tenalg.mttkrp import unfolding_dot_khatri_rao_memory
@@ -149,16 +150,10 @@ class BPTF(BaseEstimator, TransformerMixin):
         for m in modes:
             self._init_mode(m, **kwargs)
 
-    def _update_variational_params(self, m, data, mask=None):
+    def _update_posterior_multinomial(self, m, data, mask=None):
         """
-        Does the CAVI update for a single mode
-        Also updates the variational surrogate distribution statistics
-        Args:
-            m: mth mode of the data tensor
-            data: data tensor, torch tensor with same device as self.device
-            mask: binary tensor with same shape as data tensor, 1 for observed
+        Updates the posterior multinomial sufficient statistics for the latent sources
         """
-
         # \sum_{(m)} Mean along mode m for Poisson latent sources
         data = data if mask is None else data * mask
         data_hat = cp_to_tensor(cp_tensor=(None, self.G_DK_M))
@@ -168,6 +163,16 @@ class BPTF(BaseEstimator, TransformerMixin):
             (None, self.G_DK_M),
             m
         )
+
+    def _update_variational_params(self, m, data, mask=None):
+        """
+        Does the CAVI update for a single mode
+        Also updates the variational surrogate distribution statistics
+        Args:
+            m: mth mode of the data tensor
+            data: data tensor, torch tensor with same device as self.device
+            mask: binary tensor with same shape as data tensor, 1 for observed
+        """
 
         if mask is None:
             mask = torch.ones(self.data_shape, device=self.device, dtype=torch.float64)
@@ -235,6 +240,10 @@ class BPTF(BaseEstimator, TransformerMixin):
         verbose = kwargs.get('verbose', True)
         max_iter = kwargs.get('max_iter', 100)
 
+        self._update_posterior_multinomial(m, data, mask)
+        self._update_variational_params(m, data, mask)
+        self._update_cache(m, data, mask)
+
         progressbar = tqdm(range(max_iter)) if verbose else range(max_iter)
         # check for negative elbo change
         neg_delta_list = []
@@ -247,11 +256,18 @@ class BPTF(BaseEstimator, TransformerMixin):
             # curr_elbo = self._elbo(data, mask)
             # print('test')
 
+            # for m in modes:
+            #     self._update_posterior_multinomial(m, data, mask)
+
             for m in modes:
+                self._update_posterior_multinomial(m, data, mask)
                 self._update_variational_params(m, data, mask)
                 self._update_cache(m, data, mask)
-                # self._update_beta(m)
+                self._update_beta(m)
                 self._check_mode(m)
+            # for m in modes:
+            #     self._update_beta(m)
+
             bound = self._elbo(data, mask)
             # delta = (bound - curr_elbo) / abs(curr_elbo)
             delta = kahan_diff(bound, curr_elbo) / abs(curr_elbo)
@@ -266,8 +282,6 @@ class BPTF(BaseEstimator, TransformerMixin):
             if delta < 0.0:
                 neg_delta_list.append(delta.item())
                 neg_delta_when.append(itn)
-            # for m in modes:
-            #     self._update_beta(m)
             curr_elbo = bound
             if abs(delta) < kwargs.get('tol', 1e-4):
                 if verbose:
@@ -359,23 +373,37 @@ class BPTF(BaseEstimator, TransformerMixin):
         # bound += (data * 
         #           log_data_recon
         # ).sum()
-        if no_mask:
-            log_data_recon = torch.log(data_recon.clamp(min=self.epsilon))
+        # if no_mask:
+        #     log_data_recon = torch.log(data_recon.clamp(min=self.epsilon))
         # else:
         #     obs_coords = mask.to(torch.bool)
         #     data = torch.masked_select(data, obs_coords)
         #     data_recon = torch.masked_select(data_recon, obs_coords).clamp(min=self.epsilon)
         #     log_data_recon = torch.log(data_recon)
         # bound += (data * log_data_recon).sum()
-        else:
-            batch_size = 100000
-            coords = (mask == 1).nonzero(as_tuple=False)
-            for s in range(0, coords.size(0), batch_size):
-                sub = coords[s:s+batch_size]
-                data_batch = data[tuple(sub.T)]
-                data_recon_batch = data_recon[tuple(sub.T)].clamp(min=self.epsilon)
-                log_data_recon = torch.log(data_recon_batch)
-                bound += (data_batch * log_data_recon).sum()
+        # else:
+        #     batch_size = 100000
+        #     coords = (mask == 1).nonzero(as_tuple=False)
+        #     for s in range(0, coords.size(0), batch_size):
+        #         sub = coords[s:s+batch_size]
+        #         data_batch = data[tuple(sub.T)]
+        #         data_recon_batch = data_recon[tuple(sub.T)].clamp(min=self.epsilon)
+        #         log_data_recon = torch.log(data_recon_batch)
+        #         bound += (data_batch * log_data_recon).sum()
+
+        # if no_mask:
+        #     coords = (data != 0).nonzero(as_tuple=False)
+        # else:
+        #     coords = ((mask == 1) & (data != 0)).nonzero(as_tuple=False)
+        coords = (data != 0).nonzero(as_tuple=False)
+        batch_size = 100000
+        coords = (mask == 1).nonzero(as_tuple=False)
+        for s in range(0, coords.size(0), batch_size):
+            sub = coords[s:s+batch_size]
+            data_batch = data[tuple(sub.T)]
+            data_recon_batch = data_recon[tuple(sub.T)].clamp(min=self.epsilon)
+            log_data_recon = torch.log(data_recon_batch)
+            bound += (data_batch * log_data_recon).sum()
 
         assert torch.isfinite(bound), "`bound` became NaN or Inf at second part"
         

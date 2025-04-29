@@ -50,7 +50,7 @@ with open('sptensor.pkl', 'rb') as f:
 # decompose the tensor using Poisson CP decomposition
 gc.collect()
 
-include_mask = True
+include_mask = False
 if include_mask:
     print('Including mask')
 else:
@@ -64,7 +64,7 @@ else:
 
 n_components = 50
 max_iter = 500
-tol = 1e-6
+tol = 1e-4
 device = 'cuda'
 # fitting an inner join of all 3 datasets
 Y_2000_2018 = torch.tensor(Y[:, :, :, :(12*(2019-2000)), :].todense(), dtype=torch.float64, device=device)
