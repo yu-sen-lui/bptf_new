@@ -165,7 +165,7 @@ if include_mask:
     Y_mask = (1 - Y_mask.todense()).astype(np.int64).copy()
     # enforce diagonals = 0
     Y_mask[np.eye(Y_mask.shape[0]).astype(bool)] = 0
-    Y_mask = torch.tensor((1 - Y_mask.todense()).astype(np.int64).copy(), dtype=torch.float64, device=device)
+    Y_mask = torch.tensor(Y_mask.astype(np.int64).copy(), dtype=torch.float64, device=device)
     # check_mask(Y_mask)
 else:
     Y_mask = None

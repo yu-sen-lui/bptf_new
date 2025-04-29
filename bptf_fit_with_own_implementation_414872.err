@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/home/luiyusen/projects/bptf_new/fitting_bptf_with_own_implementation.py", line 109, in <module>
+    bptf_5mode.fit(Y_2000_2018, mask=GDELT_mask_2000_2018, max_iter = max_iter, tol=tol, verbose=True)
+  File "/home/luiyusen/projects/bptf_new/own_implementation.py", line 396, in fit
+    self._update(data, mask, None, **kwargs)
+  File "/home/luiyusen/projects/bptf_new/own_implementation.py", line 233, in _update
+    curr_elbo = self._elbo(data, mask)
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/luiyusen/projects/bptf_new/own_implementation.py", line 367, in _elbo
+    data_recon = torch.masked_select(data_recon, obs_coords).clamp(min=self.epsilon)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 7.79 GiB. GPU 0 has a total capacity of 79.10 GiB of which 5.60 GiB is free. Including non-PyTorch memory, this process has 73.49 GiB memory in use. Of the allocated memory 71.73 GiB is allocated by PyTorch, and 1.18 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+srun: error: n001: task 0: Exited with exit code 1

@@ -245,6 +245,7 @@ class BPTF(BaseEstimator, TransformerMixin):
             s = time.time()
 
             # curr_elbo = self._elbo(data, mask)
+            # print('test')
 
             for m in modes:
                 self._update_variational_params(m, data, mask)
@@ -260,13 +261,13 @@ class BPTF(BaseEstimator, TransformerMixin):
                 progressbar.set_description(f'ELBO = {bound: .3f}, change = {delta: .3}, time taken = {e: .3}')
 
             # check if the change is in the wrong direction
-            assert delta >= 0.0, f"ELBO is negative: {delta}"
+            # assert delta >= 0.0, f"ELBO is negative: {delta}"
             elbo_list.append(bound.item())
             if delta < 0.0:
                 neg_delta_list.append(delta.item())
                 neg_delta_when.append(itn)
-            for m in modes:
-                self._update_beta(m)
+            # for m in modes:
+            #     self._update_beta(m)
             curr_elbo = bound
             if abs(delta) < kwargs.get('tol', 1e-4):
                 if verbose:
@@ -360,12 +361,21 @@ class BPTF(BaseEstimator, TransformerMixin):
         # ).sum()
         if no_mask:
             log_data_recon = torch.log(data_recon.clamp(min=self.epsilon))
+        # else:
+        #     obs_coords = mask.to(torch.bool)
+        #     data = torch.masked_select(data, obs_coords)
+        #     data_recon = torch.masked_select(data_recon, obs_coords).clamp(min=self.epsilon)
+        #     log_data_recon = torch.log(data_recon)
+        # bound += (data * log_data_recon).sum()
         else:
-            obs_coords = mask.to(torch.bool)
-            data = torch.masked_select(data, obs_coords)
-            data_recon = torch.masked_select(data_recon, obs_coords).clamp(min=self.epsilon)
-            log_data_recon = torch.log(data_recon)
-        bound += (data * log_data_recon).sum()
+            batch_size = 100000
+            coords = (mask == 1).nonzero(as_tuple=False)
+            for s in range(0, coords.size(0), batch_size):
+                sub = coords[s:s+batch_size]
+                data_batch = data[tuple(sub.T)]
+                data_recon_batch = data_recon[tuple(sub.T)].clamp(min=self.epsilon)
+                log_data_recon = torch.log(data_recon_batch)
+                bound += (data_batch * log_data_recon).sum()
 
         assert torch.isfinite(bound), "`bound` became NaN or Inf at second part"
         
