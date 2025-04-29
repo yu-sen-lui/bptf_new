@@ -155,7 +155,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         Updates the posterior multinomial sufficient statistics for the latent sources
         """
         # \sum_{(m)} Mean along mode m for Poisson latent sources
-        data = data if mask is None else data * mask
+        # data = data if mask is None else data * mask
         data_hat = cp_to_tensor(cp_tensor=(None, self.G_DK_M))
         # data_hat = torch.clamp(data_hat, min=self.epsilon)
         self.Epsilon_DK_M[m] = self.G_DK_M[m] * unfolding_dot_khatri_rao(
