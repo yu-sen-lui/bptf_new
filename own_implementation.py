@@ -281,7 +281,7 @@ class BPTF(BaseEstimator, TransformerMixin):
                     progressbar.set_description(f'ELBO = {bound: .3f}, change = {delta: .3}, time taken = {e: .3}, mem alloc = {mem_alloc: .3}GB')
 
             # check if the change is in the wrong direction
-            # assert delta >= 0.0, f"ELBO is negative: {delta}"
+            assert delta >= 0.0, f"ELBO is negative: {delta}"
             elbo_list.append(bound.item())
             if delta < 0.0:
                 neg_delta_list.append(delta.item())
@@ -291,10 +291,10 @@ class BPTF(BaseEstimator, TransformerMixin):
                 if verbose:
                     progressbar.set_description('Change is small enough, early break')
                 break
-        print(f'Number of negative deltas: {len(neg_delta_list)}')
-        print(f'When do they occur? {neg_delta_when}')
-        print(f'what is their magnitude? {neg_delta_list}')
-        print(f'List of elbos: {elbo_list}')
+        # print(f'Number of negative deltas: {len(neg_delta_list)}')
+        # print(f'When do they occur? {neg_delta_when}')
+        # print(f'what is their magnitude? {neg_delta_list}')
+        # print(f'List of elbos: {elbo_list}')
         plt.plot(list(range(len(elbo_list))), elbo_list)
         plt.xlabel('Iter')
         plt.ylabel('Variational bound')
@@ -343,7 +343,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         
         # bound = []
 
-        no_mask = True if mask is None else False
+        # no_mask = True if mask is None else False
         mask = torch.ones_like(data, dtype=torch.float64, device=self.device) if mask is None else mask
         uttkrp_DK =  unfolding_dot_khatri_rao(
             mask,
@@ -352,7 +352,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         )
         uttkrp_K = (self.E_DK_M[0] * uttkrp_DK).sum(dim=0)
         bound = -uttkrp_K.sum()
-        print(bound)
+        # print(bound)
         # bound.append(-uttkrp_K.sum(dtype=torch.float64))
         assert torch.isfinite(uttkrp_K.sum()), "`bound` became NaN or Inf at first part"
 
@@ -364,12 +364,12 @@ class BPTF(BaseEstimator, TransformerMixin):
         # )).sum()
 
         # data_recon = tl.cp_tensor.cp_to_tensor((None, self.G_DK_M))
-        data_recon = cp_to_tensor((None, self.G_DK_M))
+        # data_recon = cp_to_tensor((None, self.G_DK_M))
         for m in range(self.n_modes):
             assert (self.G_DK_M[m] > 0).all(), "Geometric mean is negative"
             assert torch.isfinite(self.G_DK_M[m]).all(), "Geometric mean blew up"
-        assert (data_recon > 0).all(), "recon contains zeros"
-        assert torch.isfinite(data_recon).all(), "recon blew up"
+        # assert (data_recon > 0).all(), "recon contains zeros"
+        # assert torch.isfinite(data_recon).all(), "recon blew up"
 
         # From our earlier printouts, we know that the geomexp is OK. It's not infinite or NaN
         # But data recon is, i.e. Y_hat
@@ -417,16 +417,24 @@ class BPTF(BaseEstimator, TransformerMixin):
         #     coords = ((mask == 1) & (data != 0)).nonzero(as_tuple=False)
         coords = (data != 0).nonzero(as_tuple=False)
         batch_size = 100000
-        # coords = (mask == 1).nonzero(as_tuple=False)
+        log_G_DK_M = [torch.log(factor_matrix) for factor_matrix in self.G_DK_M]
         for s in range(0, coords.size(0), batch_size):
             sub = coords[s:s+batch_size]
             data_batch = data[tuple(sub.T)]
-            data_recon_batch = data_recon[tuple(sub.T)].clamp(min=self.epsilon)
+            
+            M = self.n_modes # num_factors
+            # K = self.K # num_components/rank
+            log_data_recon_batch = log_G_DK_M[0][sub[:, 0], :]
+            for m in range(1, M):
+                log_data_recon_batch += log_G_DK_M[m][sub[:, m], :]
+            
+            log_data_recon_batch = torch.logsumexp(log_data_recon_batch, dim=1)
 
-            log_data_recon = torch.log(data_recon_batch)
-            bound += (data_batch * log_data_recon).sum()
+            # data_recon_batch = data_recon[tuple(sub.T)].clamp(min=self.epsilon)
+            # log_data_recon = torch.log(data_recon_batch)
+            bound += (data_batch * log_data_recon_batch).sum()
             # bound.append((data_batch * log_data_recon).sum(dtype=torch.float64))
-        print(bound)
+        # print(bound)
         assert torch.isfinite(bound), "`bound` became NaN or Inf at second part"
         
         for m in range(self.n_modes):
@@ -434,7 +442,7 @@ class BPTF(BaseEstimator, TransformerMixin):
                                                   pb=self.alpha * self.beta_M[m],
                                                   qa=self.shp_DK_M[m],
                                                   qb=self.rte_DK_M[m],
-                                                  compute_constant=True).sum()
+                                                  compute_constant=False).sum()
 
             bound += self.K \
                 * self.data_shape[m] \
@@ -453,7 +461,7 @@ class BPTF(BaseEstimator, TransformerMixin):
             #     * self.alpha.item() \
             #     * torch.log(self.beta_M[m].clamp(min=self.epsilon))
             # )
-        print(bound)
+        # print(bound)
         assert torch.isfinite(bound), "`bound` became NaN or Inf at third part"
 
         # bound = KahanSum(bound)

@@ -57,13 +57,13 @@ else:
     print('Not including mask')
 
 # need to enforce self-country actions = 0
-# mask = Y.coords[0] != Y.coords[1]
-# new_coords = Y.coords[:, mask].copy()
-# new_data = Y.data[mask].copy()
-# Y = sparse.COO(new_coords, new_data, shape=Y.shape)
+mask = Y.coords[0] != Y.coords[1]
+new_coords = Y.coords[:, mask].copy()
+new_data = Y.data[mask].copy()
+Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
 n_components = 50
-max_iter = 500
+max_iter = 100
 tol = 1e-4
 device = 'cuda'
 # fitting an inner join of all 3 datasets
@@ -96,7 +96,7 @@ if include_mask:
     # diagonals
     GDELT_mask_2000_2018 = np.ones(Y_2000_2018.shape)
     GDELT_mask_2000_2018[:, :, :, select_aprils, 1] = 0
-    GDELT_mask_2000_2018[np.eye(GDELT_mask_2000_2018.shape[0]).astype(bool)] = 0
+    # GDELT_mask_2000_2018[np.eye(GDELT_mask_2000_2018.shape[0]).astype(bool)] = 0
     GDELT_mask_2000_2018 = GDELT_mask_2000_2018.astype(np.int64)
     GDELT_mask_2000_2018 = torch.tensor(GDELT_mask_2000_2018, dtype=torch.float64, device=device)
 else:
@@ -106,7 +106,7 @@ bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components, devic
 filepath = f'bptf_5mode_{max_iter}iter_{n_components}_components_2000_2018_own_implementation.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
-    bptf_5mode.fit(Y_2000_2018, mask=GDELT_mask_2000_2018, max_iter = max_iter, tol=tol, verbose=True)
+    bptf_5mode.fit(Y_2000_2018 * GDELT_mask_2000_2018, mask=None, max_iter = max_iter, tol=tol, verbose=True)
     with open(filepath, 'wb') as f:
         pickle.dump(bptf_5mode, f)
 else:
