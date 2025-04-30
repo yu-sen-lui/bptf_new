@@ -50,7 +50,7 @@ with open('sptensor.pkl', 'rb') as f:
 # decompose the tensor using Poisson CP decomposition
 gc.collect()
 
-include_mask = False
+include_mask = True
 if include_mask:
     print('Including mask')
 else:
