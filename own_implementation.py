@@ -365,7 +365,18 @@ class BPTF(BaseEstimator, TransformerMixin):
 
         # data_recon = tl.cp_tensor.cp_to_tensor((None, self.G_DK_M))
         data_recon = cp_to_tensor((None, self.G_DK_M))
+        for m in range(self.n_modes):
+            assert (self.G_DK_M[m] > 0).all(), "Geometric mean is negative"
+            assert torch.isfinite(self.G_DK_M[m]).all(), "Geometric mean blew up"
         assert (data_recon > 0).all(), "recon contains zeros"
+        assert torch.isfinite(data_recon).all(), "recon blew up"
+
+        # From our earlier printouts, we know that the geomexp is OK. It's not infinite or NaN
+        # But data recon is, i.e. Y_hat
+        # So, what we need to do is do log(theta_1) + \dots + log(theta_d)
+        # then we multiply with y
+        # get the coords of the nonzeros, don't form the data recon tensor, and compute the logged values directly
+
         # data_recon = data_recon if mask is None else data_recon * mask
         # this part is a computational bottleneck
         # runtime jumps from about 10s to 30s per iter
@@ -411,8 +422,6 @@ class BPTF(BaseEstimator, TransformerMixin):
             sub = coords[s:s+batch_size]
             data_batch = data[tuple(sub.T)]
             data_recon_batch = data_recon[tuple(sub.T)].clamp(min=self.epsilon)
-
-            assert torch.isfinite(data_recon).all(), "recon blew up"
 
             log_data_recon = torch.log(data_recon_batch)
             bound += (data_batch * log_data_recon).sum()
