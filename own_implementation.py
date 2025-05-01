@@ -56,6 +56,9 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.E_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
         self.G_DK_M = [torch.ones((D, self.K), dtype=torch.float64, device=self.device) for D in self.data_shape]
 
+        # non-zero coordinates
+        self.nnz_coords = None
+
         # small positive number to prevent division by 0
         self.epsilon = 0
 
@@ -217,7 +220,6 @@ class BPTF(BaseEstimator, TransformerMixin):
         self.E_DK_M[m] = self.G_DK_M[m]
         self.beta_M[m] = 1. / torch.mean(self.E_DK_M[m])
         data = data if mask is None else data * mask
-        # data_hat = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M))
         data_hat = cp_to_tensor(cp_tensor=(None, self.G_DK_M))
         self.Epsilon_DK_M[m] = self.G_DK_M[m] * unfolding_dot_khatri_rao(
             data / data_hat + self.epsilon,
@@ -287,9 +289,9 @@ class BPTF(BaseEstimator, TransformerMixin):
                 if verbose:
                     progressbar.set_description('Change is small enough, early break')
                 break
-        # print(f'Number of negative deltas: {len(neg_delta_list)}')
-        # print(f'When do they occur? {neg_delta_when}')
-        # print(f'what is their magnitude? {neg_delta_list}')
+        print(f'Number of negative deltas: {len(neg_delta_list)}')
+        print(f'When do they occur? {neg_delta_when}')
+        print(f'what is their magnitude? {neg_delta_list}')
         # print(f'List of elbos: {elbo_list}')
         plt.plot(list(range(len(elbo_list))), elbo_list)
         plt.xlabel('Iter')
@@ -412,11 +414,11 @@ class BPTF(BaseEstimator, TransformerMixin):
         #     coords = (data != 0).nonzero(as_tuple=False)
         # else:
         #     coords = ((mask == 1) & (data != 0)).nonzero(as_tuple=False)
-        coords = (data != 0).nonzero(as_tuple=False)
-        batch_size = 100000
+        # coords = ((data != 0) & (mask != 0)).nonzero(as_tuple=False)
+        batch_size = 10000
         log_G_DK_M = [torch.log(factor_matrix) for factor_matrix in self.G_DK_M]
-        for s in range(0, coords.size(0), batch_size):
-            sub = coords[s:s+batch_size]
+        for s in range(0, self.nnz_coords.size(0), batch_size):
+            sub = self.nnz_coords[s:s+batch_size]
             data_batch = data[tuple(sub.T)]
             
             M = self.n_modes # num_factors
@@ -472,6 +474,9 @@ class BPTF(BaseEstimator, TransformerMixin):
         assert data.shape == self.data_shape, f"Expected shape {self.data_shape} but got {data.shape}"
         if mask is not None:
             assert is_binary(mask), 'Mask is not binary'
+
+        cond = torch.logical_and(data != 0, mask != 0) if mask is not None else (data != 0)
+        self.nnz_coords = cond.nonzero(as_tuple=False)
 
         self._init()
         self._update(data, mask, None, **kwargs)
