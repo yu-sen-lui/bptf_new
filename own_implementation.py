@@ -240,10 +240,6 @@ class BPTF(BaseEstimator, TransformerMixin):
         verbose = kwargs.get('verbose', True)
         max_iter = kwargs.get('max_iter', 100)
 
-        self._update_posterior_multinomial(m, data, mask)
-        self._update_variational_params(m, data, mask)
-        self._update_cache(m, data, mask)
-
         progressbar = tqdm(range(max_iter)) if verbose else range(max_iter)
         # check for negative elbo change
         neg_delta_list = []
@@ -299,6 +295,7 @@ class BPTF(BaseEstimator, TransformerMixin):
         plt.xlabel('Iter')
         plt.ylabel('Variational bound')
         plt.yscale('log')
+        plt.title('ELBO trajectory for BPTF torch')
         plt.show()
 
     def _gamma_bound_term_torch(self, pa, pb, qa, qb, compute_constant=False):
