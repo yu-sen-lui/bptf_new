@@ -270,6 +270,23 @@ database_indices = pd.DataFrame({
 print(database_indices)
 del databases
 
+# action names
+actions = [
+    'Make public statement', 'Appeal', 'Express intent to cooperate', 'Consult', 'Engage in diplomatic cooperation',
+    'Engage in material cooperation', 'Provide aid', 'Yield', 'Investigate', 'Demand',
+    'Disapprove', 'Reject', 'Threaten', 'Protest', 'Exhibit military posture',
+    'Reduce relations', 'Coerce', 'Assault', 'Fight', 'Engage in unconventional mass violence'
+]
+action_indices = pd.DataFrame({
+    'action' : actions,
+    'index' : range(len(actions))
+})
+
+# save list of names for each mode
+names = [country_indices, action_indices, date_indices, database_indices]
+with open('name_lists.pkl', 'wb') as f:
+    pickle.dump(names, f)
+
 # Convert dataframes to sparse tensors
 if os.path.exists('sptensor.pkl'):
     print('sparse tensor exists')
