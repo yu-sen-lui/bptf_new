@@ -96,34 +96,73 @@ def process_date(year, verbose = False):
         return pd.DataFrame(columns=['Actor1CountryCode', 'Actor2CountryCode', 'EventBaseCode', 'SQLDATE', 'NumMentions'])
     
 filepath = 'gdelt1.csv'
-# if os.path.exists(filepath):
-if False:
+cache_filepath = os.getcwd() + '/gdelt1_cache/'
+if os.path.exists(filepath):
     gdelt1 = pd.read_csv(filepath)
     print(f'{filepath} exists')
 else:
+    os.makedirs(cache_filepath, exist_ok=True)
     "At present the GDELT 2.0 data streams only stretch back to late morning February 19, 2015"
     "From the gdelt documentation"
     print('Downloading GDELT1')
-    list_of_missing_years = list(range(2000, 2016))
+    # list_of_missing_years = list(range(2000, 2016))
+    list_of_missing_dates = ['2000-01-01', '2000-02-18']
+    list_of_missing_dates = make_date_list(list_of_missing_dates[0], list_of_missing_dates[1])
+    # gdelt1 = []
+    # while len(list_of_missing_years) > 0:
+    #     years_that_failed_to_download = []
+    #     download_list = tqdm(list_of_missing_years.copy())
+    #     for year in download_list:
+    #         year_df = process_date(str(year))
+    #         if len(year_df) > 0:
+    #             gdelt1.append(year_df)
+    #             download_list.set_description(f'{year} successfully downloaded')
+    #         else:
+    #             years_that_failed_to_download.append(year)
+    #             download_list.set_description(f'{year} failed to download')
+    #     list_of_missing_years = years_that_failed_to_download.copy()
+    #     print(f'Missing years: {list_of_missing_years}')
+    #     gc.collect()
+    # gdelt1 = pd.concat(gdelt1)
+    # gdelt1 = gdelt1[gdelt1['SQLDATE'] <= 20150218]
     gdelt1 = []
-    while len(list_of_missing_years) > 0:
-        years_that_failed_to_download = []
-        download_list = tqdm(list_of_missing_years.copy())
-        for year in download_list:
-            year_df = process_date(str(year))
-            if len(year_df) > 0:
-                gdelt1.append(year_df)
-                download_list.set_description(f'{year} successfully downloaded')
-            else:
-                years_that_failed_to_download.append(year)
-                download_list.set_description(f'{year} failed to download')
-        list_of_missing_years = years_that_failed_to_download.copy()
-        print(f'Missing years: {list_of_missing_years}')
+    bad_tries = 0
+    while len(list_of_missing_dates) > 0:
+        dates_that_failed_to_download = []
+        download_list = tqdm(list_of_missing_dates.copy())
+        for date in download_list:
+            try:
+                date_df = gdelt.gdelt(version=1).Search(date=date, table='events', coverage=True)
+            except (requests.exceptions.RequestException, ValueError) as e:
+                print(f'Error: {e}')
+                print(f'Failed to process {date}')
+                dates_that_failed_to_download.append(date)
+                download_list.set_description(f'{date} failed')
+                continue
+            download_list.set_description(f'{date} downloaded')
+            date_df = date_df[['Actor1CountryCode', 'Actor2CountryCode', 'EventBaseCode', 'SQLDATE', 'NumMentions']]
+            date_df = date_df.dropna()
+            date_df.loc[:, 'EventBaseCode'] = date_df['EventBaseCode'].str[:2]
+            date_df_filepath = cache_filepath + f'{date}.csv'
+            date_df.to_csv(date_df_filepath, index=False, mode='a', header=not os.path.exists(date_df_filepath))
+            gdelt1.append(date_df_filepath)
+        list_of_missing_dates = dates_that_failed_to_download.copy()
+        print(f'Missing dates : {list_of_missing_dates}')
         gc.collect()
-    # gdelt1 = [process_date(str(year)) for year in tqdm(range(2000, 2016))]
+        if len(dates_that_failed_to_download) > 0:
+            bad_tries += 1
+        if bad_tries > 100:
+            print(f'Bad download. Failed {bad_tries} times')
+            break
+    gdelt1 = [pd.read_csv(date_df_filepath) for date_df_filepath in gdelt1]
+    cache_dir = 'gdelt1_cache'
+    if os.path.exists(cache_dir):
+        shutil.rmtree(cache_dir)
+        print(f"Deleted '{cache_dir}' and all its contents.")
     gdelt1 = pd.concat(gdelt1)
-    gdelt1 = gdelt1[gdelt1['SQLDATE'] <= 20150218]
-    # gdelt1.to_csv(filepath, index=False)
+    gdelt1['SQLDATE'] = pd.to_datetime(gdelt1['SQLDATE'].astype(str), format='%Y%m%d')
+    gdelt1 = gdelt1.sort_values('SQLDATE')
+    gdelt1.to_csv(filepath, index=False)
 
 print(f'Earliest date is {pd.to_datetime(gdelt1["SQLDATE"].astype(str), format="%Y%m%d").min()}')
 print(f'Latest date is {pd.to_datetime(gdelt1["SQLDATE"].astype(str), format="%Y%m%d").max()}')

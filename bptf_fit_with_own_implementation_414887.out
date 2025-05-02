@@ -1,8 +1,0 @@
-Running on g002   at Mon Apr 28 04:54:42 PM CDT 2025
-SLURM_JOB_ID = 414887
-python fitting_bptf_with_own_implementation.py
-<IPython.core.display.Javascript object>
-Kernel is restarting...
-/home/luiyusen/projects/bptf_new
-Including mask
-Fitting with BPTF
