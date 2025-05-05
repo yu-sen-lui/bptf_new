@@ -134,30 +134,60 @@ data = data.loc[mask]
 data['formatteddate'] = data['formatteddate'].dt.strftime('%Y-%m-%d')
 
 gdelt_filepaths = [os.path.join('gdeltv1', f) for f in os.listdir('gdeltv1')]
-gdelt1 = [pd.read_csv(
-    gdelt_filepath, dtype={
-        'Actor1CountryCode': str,
-        'Actor2countryCode': str,
-        'EventRootCode': np.int64,
-        'SQLDATE': str,
-        'NumMentions': np.int64
-    },
-    na_values='--'
-) for gdelt_filepath in tqdm(gdelt_filepaths)]
+
+def read_gdeltv1(gdelt_filepath):
+    gdelt_chunk = pd.read_csv(
+        gdelt_filepath, dtype={
+            'Actor1CountryCode': str,
+            'Actor2countryCode': str,
+            'EventRootCode': np.int64,
+            'SQLDATE': str,
+            'NumMentions': np.int64
+        },
+        na_values='--'
+    )
+    gdelt_chunk = gdelt_chunk.rename(
+        columns={
+            'Actor1CountryCode' : 'Source_Country_Code',
+            'Actor2countryCode' : 'Target_Country_Code',
+            'EventRootCode' : 'CAMEO_Code',
+            'SQLDATE' : 'formatteddate',
+            'NumMentions' : 'Num_Events'
+        }
+    )
+    gdelt_chunk['formatteddate'] = pd.to_datetime(gdelt_chunk['formatteddate'].astype(str), format='%Y%m%d')
+    gdelt_chunk['formatteddate'] = gdelt_chunk['formatteddate'].dt.strftime('%Y-%m-%d')
+
+    return gdelt_chunk
+
+# gdelt1 = [pd.read_csv(
+#     gdelt_filepath, dtype={
+#         'Actor1CountryCode': str,
+#         'Actor2countryCode': str,
+#         'EventRootCode': np.int64,
+#         'SQLDATE': str,
+#         'NumMentions': np.int64
+#     },
+#     na_values='--'
+# ) for gdelt_filepath in tqdm(gdelt_filepaths)]
+# gdelt1 = pd.concat(gdelt1)
+# print(f'data types: {gdelt1.dtypes}')
+# gdelt1 = gdelt1.rename(
+#     columns={
+#         'Actor1CountryCode' : 'Source_Country_Code',
+#         'Actor2countryCode' : 'Target_Country_Code',
+#         'EventRootCode' : 'CAMEO_Code',
+#         'SQLDATE' : 'formatteddate',
+#         'NumMentions' : 'Num_Events'
+#     }
+# )
+# gdelt1['formatteddate'] = pd.to_datetime(gdelt1['formatteddate'].astype(str), format='%Y%m%d')
+# gdelt1['formatteddate'] = gdelt1['formatteddate'].dt.strftime('%Y-%m-%d')
+# gdelt1['Database'] = 'GDELT'
+gdelt1 = [read_gdeltv1(gdelt_filepath) for gdelt_filepath in tqdm(gdelt_filepaths, desc='Reading GDELTv1')]
 gdelt1 = pd.concat(gdelt1)
-print(f'data types: {gdelt1.dtypes}')
-gdelt1 = gdelt1.rename(
-    columns={
-        'Actor1CountryCode' : 'Source_Country_Code',
-        'Actor2countryCode' : 'Target_Country_Code',
-        'EventRootCode' : 'CAMEO_Code',
-        'SQLDATE' : 'formatteddate',
-        'NumMentions' : 'Num_Events'
-    }
-)
-gdelt1['formatteddate'] = pd.to_datetime(gdelt1['formatteddate'].astype(str), format='%Y%m%d')
-gdelt1['formatteddate'] = gdelt1['formatteddate'].dt.strftime('%Y-%m-%d')
 gdelt1['Database'] = 'GDELT'
+print(f'data types: {gdelt1.dtypes}')
 print(f'colnames = {gdelt1.columns}')
 
 # combine the data
