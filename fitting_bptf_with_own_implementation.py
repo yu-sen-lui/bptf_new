@@ -57,10 +57,10 @@ else:
     print('Not including mask')
 
 # need to enforce self-country actions = 0
-mask = Y.coords[0] != Y.coords[1]
-new_coords = Y.coords[:, mask].copy()
-new_data = Y.data[mask].copy()
-Y = sparse.COO(new_coords, new_data, shape=Y.shape)
+# mask = Y.coords[0] != Y.coords[1]
+# new_coords = Y.coords[:, mask].copy()
+# new_data = Y.data[mask].copy()
+# Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
 n_components = 50
 max_iter = 500
@@ -95,8 +95,8 @@ if include_mask:
     # aprils up to 2015 for GDELT
     # diagonals
     GDELT_mask_2000_2018 = np.ones(Y_2000_2018.shape)
-    GDELT_mask_2000_2018[:, :, :, select_aprils, 1] = 0
-    # GDELT_mask_2000_2018[np.eye(GDELT_mask_2000_2018.shape[0]).astype(bool)] = 0
+    # GDELT_mask_2000_2018[:, :, :, select_aprils, 1] = 0
+    GDELT_mask_2000_2018[np.eye(GDELT_mask_2000_2018.shape[0]).astype(bool)] = 0
     GDELT_mask_2000_2018 = GDELT_mask_2000_2018.astype(np.int64)
     GDELT_mask_2000_2018 = torch.tensor(GDELT_mask_2000_2018, dtype=torch.float64, device=device)
 else:
@@ -153,15 +153,16 @@ if include_mask:
 
     # For GDELT, we have an issue with GDELT1
     # GDELT1 spans up to 2014, and April of each year has an abnormally large count, about 5 times the other months
-    select_aprils = list(range(3, 12*(2015-2000), 12))
-    GDELT_masked_months = np.array(select_aprils)
-    coordinates = np.meshgrid(I_range, I_range, A_range, GDELT_masked_months, np.ones(1))
-    flattened_indices = [np.ravel(coords) for coords in coordinates]
-    flattened_indices = np.vstack(flattened_indices)
-    flattened_indices = flattened_indices.astype(np.int64)
-    GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
+    # select_aprils = list(range(3, 12*(2015-2000), 12))
+    # GDELT_masked_months = np.array(select_aprils)
+    # coordinates = np.meshgrid(I_range, I_range, A_range, GDELT_masked_months, np.ones(1))
+    # flattened_indices = [np.ravel(coords) for coords in coordinates]
+    # flattened_indices = np.vstack(flattened_indices)
+    # flattened_indices = flattened_indices.astype(np.int64)
+    # GDELT_mask = sparse.COO(coords=flattened_indices, data=np.ones(flattened_indices.shape[1]), shape=Y.shape)
 
-    Y_mask = ICEWS_mask + TERRIER_mask + GDELT_mask
+    # Y_mask = ICEWS_mask + TERRIER_mask + GDELT_mask
+    Y_mask = ICEWS_mask + TERRIER_mask
     Y_mask = (1 - Y_mask.todense()).astype(np.int64).copy()
     # enforce diagonals = 0
     Y_mask[np.eye(Y_mask.shape[0]).astype(bool)] = 0
