@@ -134,8 +134,18 @@ data = data.loc[mask]
 data['formatteddate'] = data['formatteddate'].dt.strftime('%Y-%m-%d')
 
 gdelt_filepaths = [os.path.join('gdeltv1', f) for f in os.listdir('gdeltv1')]
-gdelt1 = [pd.read_csv(gdelt_filepath) for gdelt_filepath in tqdm(gdelt_filepaths)]
+gdelt1 = [pd.read_csv(
+    gdelt_filepath, dtype={
+        'Actor1CountryCode': str,
+        'Actor2countryCode': str,
+        'EventRootCode': np.int64,
+        'SQLDATE': str,
+        'NumMentions': np.int64
+    },
+    na_values='--'
+) for gdelt_filepath in tqdm(gdelt_filepaths)]
 gdelt1 = pd.concat(gdelt1)
+print(f'data types: {gdelt1.dtypes}')
 gdelt1 = gdelt1.rename(
     columns={
         'Actor1CountryCode' : 'Source_Country_Code',
@@ -154,6 +164,7 @@ print(f'colnames = {gdelt1.columns}')
 # we stack the data since the downloaded GDELT data is from before 2015 and the bigquery one is post-2015
 # data = data[data['Database'] != 'GDELT']
 data = pd.concat([data, gdelt1])
+data.sort_values(by='formatteddate', inplace=True)
 print(data.head())
 print(data.tail())
 del gdelt1
