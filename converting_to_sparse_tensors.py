@@ -131,6 +131,7 @@ data['formatteddate'] = pd.to_datetime(data['formatteddate'], format='%Y-%m-%d')
 cutoff = pd.to_datetime('2015-02-18')
 mask = ~((data['Database'] == 'GDELT') & (data['formatteddate'] <= cutoff))
 data = data.loc[mask]
+data['formatteddate'] = data['formatteddate'].dt.strftime('%Y-%m-%d')
 
 gdelt_filepaths = [os.path.join('gdeltv1', f) for f in os.listdir('gdeltv1')]
 gdelt1 = [pd.read_csv(gdelt_filepath) for gdelt_filepath in tqdm(gdelt_filepaths)]
@@ -138,7 +139,7 @@ gdelt1 = pd.concat(gdelt1)
 gdelt1 = gdelt1.rename(
     columns={
         'Actor1CountryCode' : 'Source_Country_Code',
-        'Actor2CountryCode' : 'Target_Country_Code',
+        'Actor2countryCode' : 'Target_Country_Code',
         'EventRootCode' : 'CAMEO_Code',
         'SQLDATE' : 'formatteddate',
         'NumMentions' : 'Num_Events'
@@ -147,6 +148,7 @@ gdelt1 = gdelt1.rename(
 gdelt1['formatteddate'] = pd.to_datetime(gdelt1['formatteddate'].astype(str), format='%Y%m%d')
 gdelt1['formatteddate'] = gdelt1['formatteddate'].dt.strftime('%Y-%m-%d')
 gdelt1['Database'] = 'GDELT'
+print(f'colnames = {gdelt1.columns}')
 
 # combine the data
 # we stack the data since the downloaded GDELT data is from before 2015 and the bigquery one is post-2015
