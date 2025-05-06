@@ -69,6 +69,12 @@ device = 'cuda'
 # fitting an inner join of all 3 datasets
 Y_2000_2018 = torch.tensor(Y[:, :, :, :(12*(2019-2000)), :].todense(), dtype=torch.float64, device=device)
 
+with open('name_lists.pkl', 'rb') as f:
+    country_indices, action_indices, date_indices, database_indices = pickle.load(f)
+gdelt_index = database_indices[database_indices['database'] == 'GDELT']
+icews_index = database_indices[database_indices['database'] == 'ICEWS']
+terrier_index = database_indices[database_indices['database'] == 'TERRIER']
+
 # we need a mask for the aprils of GDELT here as well
 if include_mask:
     # For GDELT, we have an issue with GDELT1
@@ -106,7 +112,7 @@ bptf_5mode = BPTF(data_shape=Y_2000_2018.shape, n_components=n_components, devic
 filepath = f'bptf_5mode_{max_iter}iter_{n_components}_components_2000_2018_own_implementation.pkl'
 if not os.path.exists(filepath):
     print('Fitting with BPTF')
-    bptf_5mode.fit(Y_2000_2018 * GDELT_mask_2000_2018, mask=None, max_iter = max_iter, tol=tol, verbose=True)
+    bptf_5mode.fit(Y_2000_2018, mask=GDELT_mask_2000_2018, max_iter = max_iter, tol=tol, verbose=True)
     with open(filepath, 'wb') as f:
         pickle.dump(bptf_5mode, f)
 else:
@@ -126,10 +132,11 @@ if include_mask:
     # need to mask unobserved dates for ICEWS and TERRIER
     # ICEWS is missing data from 2024 (1 year)
     # TERRIER is missing data from 2019 onwards (5 years)
-    #   database  index
-    # 0    ICEWS      0
-    # 1    GDELT      1
+    
+    # 0    GDELT      0
+    # 1    ICEWS      1
     # 2  TERRIER      2
+    
     # ICEWS 
     I_range = np.arange(Y.shape[0])
     A_range = np.arange(Y.shape[2])
@@ -137,7 +144,7 @@ if include_mask:
     D_range = np.arange(Y.shape[4])
 
     ICEWS_masked_months = np.arange(Y.shape[3])[-12:]
-    coordinates = np.meshgrid(I_range, I_range, A_range, ICEWS_masked_months, np.zeros(1))
+    coordinates = np.meshgrid(I_range, I_range, A_range, ICEWS_masked_months, np.zeros(1) * icews_index)
     flattened_indices = [np.ravel(coords) for coords in coordinates]
     flattened_indices = np.vstack(flattened_indices)
     flattened_indices = flattened_indices.astype(np.int64)
@@ -145,7 +152,7 @@ if include_mask:
 
     # TERRIER
     TERRIER_masked_months = np.arange(Y.shape[3])[-5*12:]
-    coordinates = np.meshgrid(I_range, I_range, A_range, TERRIER_masked_months, np.ones(1)*2)
+    coordinates = np.meshgrid(I_range, I_range, A_range, TERRIER_masked_months, np.ones(1) * terrier_index)
     flattened_indices = [np.ravel(coords) for coords in coordinates]
     flattened_indices = np.vstack(flattened_indices)
     flattened_indices = flattened_indices.astype(np.int64)
