@@ -1,0 +1,27 @@
+Traceback (most recent call last):
+  File "/home/luiyusen/projects/bptf_new/fitting_bptf_with_own_implementation.py", line 147, in <module>
+    coordinates = np.meshgrid(I_range, I_range, A_range, ICEWS_masked_months, np.zeros(1) * icews_index)
+                                                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+  File "/home/luiyusen/.conda/envs/bptf/lib/python3.11/site-packages/pandas/core/generic.py", line 2171, in __array_ufunc__
+    return arraylike.array_ufunc(self, ufunc, method, *inputs, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/luiyusen/.conda/envs/bptf/lib/python3.11/site-packages/pandas/core/arraylike.py", line 276, in array_ufunc
+    result = maybe_dispatch_ufunc_to_dunder_op(self, ufunc, method, *inputs, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "ops_dispatch.pyx", line 113, in pandas._libs.ops_dispatch.maybe_dispatch_ufunc_to_dunder_op
+  File "/home/luiyusen/.conda/envs/bptf/lib/python3.11/site-packages/pandas/core/ops/common.py", line 76, in new_method
+    return method(self, other)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/luiyusen/.conda/envs/bptf/lib/python3.11/site-packages/pandas/core/arraylike.py", line 206, in __rmul__
+    return self._arith_method(other, roperator.rmul)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/luiyusen/.conda/envs/bptf/lib/python3.11/site-packages/pandas/core/frame.py", line 7910, in _arith_method
+    self, other = self._align_for_op(other, axis, flex=True, level=None)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/luiyusen/.conda/envs/bptf/lib/python3.11/site-packages/pandas/core/frame.py", line 8141, in _align_for_op
+    right = to_series(right)
+            ^^^^^^^^^^^^^^^^
+  File "/home/luiyusen/.conda/envs/bptf/lib/python3.11/site-packages/pandas/core/frame.py", line 8133, in to_series
+    raise ValueError(
+ValueError: Unable to coerce to Series, length must be 2: given 1
+srun: error: j004-ds: task 0: Exited with exit code 1
