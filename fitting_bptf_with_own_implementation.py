@@ -71,9 +71,10 @@ Y_2000_2018 = torch.tensor(Y[:, :, :, :(12*(2019-2000)), :].todense(), dtype=tor
 
 with open('name_lists.pkl', 'rb') as f:
     country_indices, action_indices, date_indices, database_indices = pickle.load(f)
-gdelt_index = database_indices[database_indices['database'] == 'GDELT']
-icews_index = database_indices[database_indices['database'] == 'ICEWS']
-terrier_index = database_indices[database_indices['database'] == 'TERRIER']
+gdelt_index = database_indices[database_indices['database'] == 'GDELT']['index'].iloc[0]
+icews_index = database_indices[database_indices['database'] == 'ICEWS']['index'].iloc[0]
+terrier_index = database_indices[database_indices['database'] == 'TERRIER']['index'].iloc[0]
+print(type(icews_index), icews_index)
 
 # we need a mask for the aprils of GDELT here as well
 if include_mask:
@@ -174,7 +175,9 @@ if include_mask:
     Y_mask = ICEWS_mask + TERRIER_mask
     Y_mask = (1 - Y_mask.todense()).astype(np.int64).copy()
     # enforce diagonals = 0
-    Y_mask[np.eye(Y_mask.shape[0]).astype(bool)] = 0
+    # Y_mask[np.eye(Y_mask.shape[0]).astype(bool)] = 0
+    diagonal_indices = np.arange(Y_mask.shape[0])
+    Y_mask[diagonal_indices, diagonal_indices, :, :, :] = 0
     Y_mask = torch.tensor(Y_mask.astype(np.int64).copy(), dtype=torch.float64, device=device)
     # check_mask(Y_mask)
 else:
