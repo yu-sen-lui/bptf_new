@@ -1,0 +1,14 @@
+Running on m001   at Tue May  6 06:55:53 PM CDT 2025
+SLURM_JOB_ID = 418674
+python fitting_bptf_with_own_implementation.py
+<IPython.core.display.Javascript object>
+Kernel is restarting...
+/home/luiyusen/projects/bptf_new
+Including mask
+<class 'numpy.int64'> 1
+bptf_5mode_500iter_100_components_2000_2018_own_implementation.pkl exists
+Fitting with BPTF
+Number of negative deltas: 0
+When do they occur? []
+what is their magnitude? []
+Finished at Tue May  6 07:04:46 PM CDT 2025
