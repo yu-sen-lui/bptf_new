@@ -1,0 +1,15 @@
+Running on j004-ds   at Thu May  8 01:26:07 PM CDT 2025
+SLURM_JOB_ID = 420505
+python experiment_with_data.py
+<IPython.core.display.Javascript object>
+Kernel is restarting...
+/home/luiyusen/projects/bptf_new
+32
+Number of mentions set to 1
+  database  index
+0  TERRIER      0
+1    ICEWS      1
+2    GDELT      2
+Number of negative deltas: 0
+When do they occur? []
+what is their magnitude? []
