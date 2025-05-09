@@ -37,12 +37,12 @@ import gc
 gc.collect()
 
 # Global variables and settings ===================================================================
-parallel = False
+parallel = True
 num_mentions_set_to_1 = False
 inverse_weight_by_total_count = True
 n_components = 200
 max_iter = 500
-tol = 1e-4
+tol = 1e-6
 device = 'cuda'
 if parallel:
     print(multiprocessing.cpu_count())
