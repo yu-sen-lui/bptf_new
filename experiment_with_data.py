@@ -37,11 +37,11 @@ import gc
 gc.collect()
 
 # Global variables and settings ===================================================================
-parallel = True
-num_mentions_set_to_1 = True
-inverse_weight_by_total_len = False
-n_components = 100
-max_iter = 100
+parallel = False
+num_mentions_set_to_1 = False
+inverse_weight_by_total_count = True
+n_components = 200
+max_iter = 500
 tol = 1e-4
 device = 'cuda'
 if parallel:
@@ -180,6 +180,23 @@ data = data.dropna()
 if num_mentions_set_to_1:
     print('Number of mentions set to 1')
     data['Num_Events'] = 1
+
+if inverse_weight_by_total_count:
+    print('Rescaling to match totals')
+    totals = data.groupby('Database')['Num_Events'].sum()
+    target = int(totals.min())
+    def approx_rescale(df):
+        orig = df['Num_Events']
+        factor = target / orig.sum()
+        new_counts = (orig * factor).round().astype(int).clip(lower=1)
+        df = df.copy()
+        df['Num_Events'] = new_counts
+        return df
+    data = (
+        data
+        .groupby('Database', group_keys=False)
+        .apply(approx_rescale)
+        )
 
 data['formatteddate'] = data['formatteddate'].str[:7]
 data = data.groupby(['Source_Country_Code', 'Target_Country_Code', 'CAMEO_Code', 'formatteddate', 'Database'])
@@ -368,6 +385,7 @@ def component_analysis_plot(component, entropy_rank):
     fig.suptitle(f"Entropy rank {entropy_rank}. Component {component}")
 
     plt.savefig(os.path.join(os.getcwd(), folder_path, f"Plot_entropy_rank_{entropy_rank}_component_{component}.png"))
+    plt.close()
 
 entropy_rank = 1
 for component in tqdm(database_components['index'], desc='Plotting components'):
