@@ -40,6 +40,7 @@ gc.collect()
 parallel = True
 num_mentions_set_to_1 = False
 inverse_weight_by_total_count = True
+force_diagonal_to_zero = True
 n_components = 200
 max_iter = 500
 tol = 1e-6
@@ -272,6 +273,14 @@ while len(data) > 10:
     data = [sum(batch) for batch in data]
 Y = sum(data)
 del data
+
+if force_diagonal_to_zero:
+    print('Forcing self-actions to zero instead of just masking them')
+    diagonal_indices = np.arange(0, Y.shape[0])
+    Y = Y.todense()
+    Y[diagonal_indices, diagonal_indices, :, :, :] = 0
+    Y = Y.astype(np.int64)
+    Y = sparse.COO(Y)
 
 # Fit BPTF ========================================================================================
 Y = torch.tensor(Y[:, :, :, :(12*(2019-2000)), :].todense(), dtype=torch.float64, device=device)

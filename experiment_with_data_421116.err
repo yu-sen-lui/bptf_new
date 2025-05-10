@@ -1,0 +1,3 @@
+srun: Job step aborted: Waiting up to 63 seconds for job step to finish.
+Reading data:   0%|          | 0/103 [00:00<?, ?it/s]Reading data:   1%|          | 1/103 [00:01<01:46,  1.04s/it]Reading data:   2%|▏         | 2/103 [00:01<01:28,  1.14it/s]Reading data:   3%|▎         | 3/103 [00:02<01:18,  1.27it/s]slurmstepd-g002: error: *** STEP 421116.0 ON g002 CANCELLED AT 2025-05-09T17:34:05 ***
+slurmstepd-g002: error: *** JOB 421116 ON g002 CANCELLED AT 2025-05-09T17:34:05 ***
