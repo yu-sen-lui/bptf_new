@@ -38,8 +38,8 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-num_mentions_set_to_1 = False
-inverse_weight_by_total_count = True
+num_mentions_set_to_1 = True
+inverse_weight_by_total_count = False
 force_diagonal_to_zero = True
 n_components = 100
 max_iter = 500
