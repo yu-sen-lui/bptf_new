@@ -1,11 +1,11 @@
-Running on j001-ds   at Thu May  8 10:50:44 PM CDT 2025
-SLURM_JOB_ID = 420834
+Running on h001   at Wed May 14 12:07:45 PM CDT 2025
+SLURM_JOB_ID = 427560
 python experiment_with_data.py
 <IPython.core.display.Javascript object>
 Kernel is restarting...
 /home/luiyusen/projects/bptf_new
-32
-Rescaling to match totals
+64
+Number of mentions set to 1
   database  index
 0  TERRIER      0
 1    ICEWS      1

@@ -40,7 +40,7 @@ gc.collect()
 parallel = True
 num_mentions_set_to_1 = True
 inverse_weight_by_total_count = False
-force_diagonal_to_zero = True
+force_diagonal_to_zero = False
 n_components = 100
 max_iter = 500
 tol = 1e-6

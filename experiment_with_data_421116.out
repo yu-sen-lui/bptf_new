@@ -1,7 +1,0 @@
-Running on g002   at Fri May  9 05:33:41 PM CDT 2025
-SLURM_JOB_ID = 421116
-python experiment_with_data.py
-<IPython.core.display.Javascript object>
-Kernel is restarting...
-/home/luiyusen/projects/bptf_new
-64
