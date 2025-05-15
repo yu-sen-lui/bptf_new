@@ -37,4 +37,7 @@ export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
 echo "python fitting_bptf_with_own_implementation.py"
 srun --exclusive python fitting_bptf_with_own_implementation.py
 
+echo "papermill plotting_patterns_with_own_implementation.ipynb plotting_patterns_with_own_implementation.ipynb --kernel python3"
+srun --exclusive papermill plotting_patterns_with_own_implementation.ipynb plotting_patterns_with_own_implementation.ipynb --kernel python3
+
 echo "Finished at $(date)"

@@ -1,0 +1,18 @@
+Running on i001-ds   at Thu May 15 09:20:04 AM CDT 2025
+SLURM_JOB_ID = 428267
+python running_data_separately_and_combined.py
+/home/luiyusen/projects/bptf_new
+64
+running_data_separately_and_combined_plots/combined exists
+running_data_separately_and_combined_plots/icews exists
+running_data_separately_and_combined_plots/gdelt exists
+running_data_separately_and_combined_plots/terrier exists
+  database  index
+0  TERRIER      0
+1    ICEWS      1
+2    GDELT      2
+Fitting for combined
+Number of negative deltas: 0
+When do they occur? []
+what is their magnitude? []
+Fitting for icews

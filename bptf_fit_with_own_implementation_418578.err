@@ -1,5 +1,0 @@
-  File "/home/luiyusen/projects/bptf_new/fitting_bptf_with_own_implementation.py", line 59
-    need to enforce self-country actions = 0
-         ^^
-SyntaxError: invalid syntax
-srun: error: j004-ds: task 0: Exited with exit code 1

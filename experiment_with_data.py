@@ -252,7 +252,7 @@ action_indices = pd.DataFrame({
 })
 
 # Convert to sparse tensor ========================================================================
-n_batches = 10000
+n_batches = 1000
 n = 10
 
 data = np.array_split(data, n_batches)
