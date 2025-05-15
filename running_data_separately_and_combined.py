@@ -26,10 +26,10 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-4
+tol = 1e-6
 max_iter = 1000
 device = 'cuda'
-end_year = 5
+end_year = 18
 if parallel:
     print(multiprocessing.cpu_count())
 
@@ -405,4 +405,4 @@ for model_name in model_list:
     else:
         for component in tqdm(list(range(n_components[model_name])), desc=f'Plotting components for {model_name}'):
             path_to_save_plot = os.path.join(os.getcwd(), folder_path, model_name, f"model_name_{model_name}_component_{component}.png")
-            component_analysis_plot(component, entropy_rank, path_to_save_plot, entropy_rank = None, database = model_name)
+            component_analysis_plot(component, path_to_save_plot, entropy_rank = None, database = model_name)
