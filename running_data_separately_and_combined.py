@@ -215,14 +215,14 @@ model_list = ['combined', 'icews', 'gdelt', 'terrier']
 
 folder_path = "running_data_separately_and_combined_plots"
 
-for model_name in tqdm(model_list, desc='Handling folders'):
+for model_name in tqdm(model_list):
     plot_folder_path = os.path.join(folder_path, model_name)
     if os.path.isdir(plot_folder_path):
         print(f'{plot_folder_path} exists')
     else:
         os.makedirs(plot_folder_path)
         print(f'{plot_folder_path} created')
-    for entry in tqdm(os.listdir(plot_folder_path), desc='Deleting existing plot pngs'):
+    for entry in tqdm(os.listdir(plot_folder_path), desc=f'Deleting existing plot pngs for {model_list}'):
         path = os.path.join(plot_folder_path, entry)
         if os.path.isfile(path) or os.path.islink(path):
             os.unlink(path)
