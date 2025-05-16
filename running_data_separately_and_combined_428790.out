@@ -1,8 +1,0 @@
-Running on j005-ds   at Thu May 15 07:58:57 PM CDT 2025
-SLURM_JOB_ID = 428790
-python running_data_separately_and_combined.py --n_components_combined '600'
-/home/luiyusen/projects/bptf_new
-running_data_separately_and_combined_plots_600_components/combined created
-running_data_separately_and_combined_plots_600_components/icews created
-running_data_separately_and_combined_plots_600_components/gdelt created
-running_data_separately_and_combined_plots_600_components/terrier created

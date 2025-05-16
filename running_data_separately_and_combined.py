@@ -142,6 +142,8 @@ def component_analysis_plot(component, path_to_save, entropy_rank = None, databa
         entropy_rank: if ranking by entropy, use this. You can leave this as a blank str
         path_to_save: path to save png plot, relative to working directory
         database: name of database if your bptf was fit to only 1 database
+    Returns:
+        symmetric: binary. 1 if top sender is the same as top receiver
     """
 
     fig = plt.figure(figsize=(20, 18))
@@ -222,6 +224,12 @@ def component_analysis_plot(component, path_to_save, entropy_rank = None, databa
 
     plt.savefig(path_to_save)
     plt.close()
+
+    # get top sender and receiver to check if factor is symmetric
+    top_sender = sender_vector['country'].iloc[0]
+    top_receiver = receiver_vector['country'].iloc[0]
+    symmetric = 1 if top_sender == top_receiver else 0
+    return symmetric
 
 # folder management ===============================================================================
 
@@ -369,7 +377,8 @@ Y = sum(data)
 del data
 
 # Fit BPTF ========================================================================================
-# run for combined
+symmetry_counts = []
+
 database_mapping = dict(zip(database_indices['database'], database_indices['index']))
 for model_name in model_list:
     print(f'Fitting for {model_name}')
@@ -396,7 +405,8 @@ for model_name in model_list:
     bptf_model = BPTF(data_shape=Y_.shape, n_components=n_components[model_name], device=device)
     bptf_model.fit(Y_, mask=mask, max_iter = max_iter, tol=tol, verbose=True)
 
-    # plot for combined
+    # plot factors
+    symmetry_count = 0
     G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in bptf_model.G_DK_M]
     G_DK_M = [factor_matrix / factor_matrix.sum(axis=0) for factor_matrix in G_DK_M]
     if model_name == 'combined':
@@ -414,9 +424,15 @@ for model_name in model_list:
         entropy_rank = 1
         for component in tqdm(database_components['index'], desc=f'Plotting components for {model_name}'):
             path_to_save_plot = os.path.join(os.getcwd(), folder_path, model_name, f"entropy_rank_{entropy_rank}_component_{component}.png")
-            component_analysis_plot(component, path_to_save_plot, entropy_rank)
+            symmetry_count += component_analysis_plot(component, path_to_save_plot, entropy_rank)
             entropy_rank += 1
     else:
         for component in tqdm(list(range(n_components[model_name])), desc=f'Plotting components for {model_name}'):
             path_to_save_plot = os.path.join(os.getcwd(), folder_path, model_name, f"model_name_{model_name}_component_{component}.png")
-            component_analysis_plot(component, path_to_save_plot, entropy_rank = None, database = model_name)
+            symmetry_count += component_analysis_plot(component, path_to_save_plot, entropy_rank = None, database = model_name)
+    
+    symmetry_counts.append(symmetry_count)
+
+symmetry_counts = pd.Dataframe({
+    
+})
