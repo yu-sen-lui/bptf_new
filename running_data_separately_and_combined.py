@@ -37,11 +37,11 @@ import gc
 gc.collect()
 
 # Global variables and settings ===================================================================
-parallel = False
-tol = 1e-6
+parallel = True
+tol = 1e-4
 max_iter = 1000
 device = 'cuda'
-end_year = 18
+end_year = 1
 if parallel:
     print(multiprocessing.cpu_count())
 
@@ -433,6 +433,10 @@ for model_name in model_list:
     
     symmetry_counts.append(symmetry_count)
 
-symmetry_counts = pd.Dataframe({
-    
+symmetry_counts = pd.DataFrame({
+    'model': model_list,
+    'components': n_components.values(),
+    'symmetry_counts': symmetry_counts
 })
+symmetry_counts['proportion'] = symmetry_counts['symmetry_counts'] / symmetry_counts['components']
+symmetry_counts.to_csv(os.path.join(folder_path, 'symmetry_counts.csv'))
