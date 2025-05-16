@@ -1,0 +1,12 @@
+Running on g002   at Thu May 15 07:36:13 PM CDT 2025
+SLURM_JOB_ID = 428785
+python running_data_separately_and_combined.py
+/home/luiyusen/projects/bptf_new
+running_data_separately_and_combined_plots/combined exists
+running_data_separately_and_combined_plots/icews exists
+running_data_separately_and_combined_plots/gdelt exists
+running_data_separately_and_combined_plots/terrier exists
+  database  index
+0  TERRIER      0
+1    ICEWS      1
+2    GDELT      2

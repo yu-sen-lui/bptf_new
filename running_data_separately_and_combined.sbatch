@@ -26,6 +26,9 @@ echo "SLURM_JOB_ID = $SLURM_JOB_ID"
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate bptf                         # <-- your env
 
+# grab first positional arg (or fall back to 150)
+N_COMBINED=${1:-150}
+
 # limit NumPy / MKL threads to the cores we asked for
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
@@ -34,7 +37,7 @@ export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
 # Using "srun" inside the allocation guarantees proper I/O buffering & GPU bind.
 # They run SEQUENTIALLY here; put "&" after a command if you want concurrency.
 
-echo "python running_data_separately_and_combined.py"
-srun --exclusive python running_data_separately_and_combined.py
+echo "python running_data_separately_and_combined.py --n_components_combined '${N_COMBINED}'"
+srun --exclusive python running_data_separately_and_combined.py --n_components_combined "${N_COMBINED}"
 
 echo "Finished at $(date)"

@@ -1,4 +1,16 @@
+# handling parameter arguments ====================================================================
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--n_components_combined",
+    type=int,
+    default=150,
+    help="number of combined components"
+)
+args = parser.parse_args()
+
 # packages ========================================================================================
+
 import bptf
 from own_implementation import BPTF
 import numpy as np
@@ -25,7 +37,7 @@ import gc
 gc.collect()
 
 # Global variables and settings ===================================================================
-parallel = True
+parallel = False
 tol = 1e-6
 max_iter = 1000
 device = 'cuda'
@@ -34,11 +46,13 @@ if parallel:
     print(multiprocessing.cpu_count())
 
 n_components = {
-    'combined' : 150,
-    'icews' : 50,
-    'gdelt' : 50,
-    'terrier' : 50
+    "combined": args.n_components_combined,
+    "icews": int(round(args.n_components_combined / 3)),
+    "gdelt": int(round(args.n_components_combined / 3)),
+    "terrier": int(round(args.n_components_combined / 3)),
 }
+
+print(f'Components for each model: {n_components}')
 
 def dataframe_to_sparse_tensor(data, country_indices, date_indices, database_indices, cameo_col='CAMEO_Code', events_col='Num_Events'):
     """
@@ -213,16 +227,16 @@ def component_analysis_plot(component, path_to_save, entropy_rank = None, databa
 
 model_list = ['combined', 'icews', 'gdelt', 'terrier']
 
-folder_path = "running_data_separately_and_combined_plots"
+folder_path = f"running_data_separately_and_combined_plots_{n_components['combined']}_components"
 
-for model_name in tqdm(model_list):
+for model_name in model_list:
     plot_folder_path = os.path.join(folder_path, model_name)
     if os.path.isdir(plot_folder_path):
         print(f'{plot_folder_path} exists')
     else:
         os.makedirs(plot_folder_path)
         print(f'{plot_folder_path} created')
-    for entry in tqdm(os.listdir(plot_folder_path), desc=f'Deleting existing plot pngs for {model_list}'):
+    for entry in tqdm(os.listdir(plot_folder_path), desc=f'Deleting existing plot pngs for {model_name}'):
         path = os.path.join(plot_folder_path, entry)
         if os.path.isfile(path) or os.path.islink(path):
             os.unlink(path)
