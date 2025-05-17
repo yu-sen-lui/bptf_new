@@ -38,10 +38,10 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-4
-max_iter = 1000
+tol = 1e-9
+max_iter = 10000
 device = 'cuda'
-end_year = 1
+end_year = 18
 if parallel:
     print(multiprocessing.cpu_count())
 

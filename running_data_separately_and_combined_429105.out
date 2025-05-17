@@ -1,0 +1,15 @@
+Running on j002-ds   at Fri May 16 06:41:17 PM CDT 2025
+SLURM_JOB_ID = 429105
+python running_data_separately_and_combined.py --n_components_combined '300'
+/home/luiyusen/projects/bptf_new
+32
+Components for each model: {'combined': 300, 'icews': 100, 'gdelt': 100, 'terrier': 100}
+running_data_separately_and_combined_plots_300_components/combined exists
+running_data_separately_and_combined_plots_300_components/icews exists
+running_data_separately_and_combined_plots_300_components/gdelt exists
+running_data_separately_and_combined_plots_300_components/terrier exists
+  database  index
+0  TERRIER      0
+1    ICEWS      1
+2    GDELT      2
+Fitting for combined
