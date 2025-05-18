@@ -1,0 +1,2 @@
+/home/luiyusen/.conda/envs/bptf/bin/python: can't open file '/home/luiyusen/projects/bptf_new/run_bptf.py': [Errno 2] No such file or directory
+srun: error: i001-ds: task 0: Exited with exit code 2

@@ -7,6 +7,11 @@ parser.add_argument(
     default=150,
     help="number of combined components"
 )
+parser.add_argument(
+    "--force_diagonals_zero",
+    action='store_true',
+    help='Forces self-actions to 0 instead of just masking them'
+)
 args = parser.parse_args()
 
 # packages ========================================================================================
@@ -38,7 +43,7 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-9
+tol = 1e-6
 max_iter = 10000
 device = 'cuda'
 end_year = 18
@@ -53,6 +58,10 @@ n_components = {
 }
 
 print(f'Components for each model: {n_components}')
+
+force_diagonals_zero = args.force_diagonals_zero
+if force_diagonals_zero:
+    print('Forcing self-actions to 0')
 
 def dataframe_to_sparse_tensor(data, country_indices, date_indices, database_indices, cameo_col='CAMEO_Code', events_col='Num_Events'):
     """
@@ -300,6 +309,10 @@ del gdelt1
 years = [str(2000 + x) for x in range(0, end_year)]
 data = data[data['formatteddate'].str.startswith(tuple(years))]
 data = data.dropna()
+
+if force_diagonals_zero:
+    print('Removing self actions')
+    data = data[data['Source_Country_Code'] != data['Target_Country_Code']]
 
 data['formatteddate'] = data['formatteddate'].str[:7]
 data = data.groupby(['Source_Country_Code', 'Target_Country_Code', 'CAMEO_Code', 'formatteddate', 'Database'])
