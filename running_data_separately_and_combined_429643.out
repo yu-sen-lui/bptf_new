@@ -1,3 +1,0 @@
-Running on i001-ds   at Sat May 17 06:38:58 PM CDT 2025
-SLURM_JOB_ID = 429643
-srun --exclusive python run_bptf.py        --n_components_combined 150        
