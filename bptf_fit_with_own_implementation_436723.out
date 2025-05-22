@@ -1,0 +1,12 @@
+Running on m001   at Thu May 22 01:15:17 PM CDT 2025
+SLURM_JOB_ID = 436723
+python fitting_bptf_with_own_implementation.py
+<IPython.core.display.Javascript object>
+Kernel is restarting...
+/home/luiyusen/projects/bptf_new
+Including mask
+<class 'numpy.int64'> 1
+Fitting with BPTF
+Fitting with BPTF
+papermill plotting_patterns_with_own_implementation.ipynb plotting_patterns_with_own_implementation.ipynb --kernel python3
+Finished at Thu May 22 03:34:31 PM CDT 2025

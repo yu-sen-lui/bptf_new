@@ -251,12 +251,6 @@ class BPTF(BaseEstimator, TransformerMixin):
 
             s = time.time()
 
-            # curr_elbo = self._elbo(data, mask)
-            # print('test')
-
-            # for m in modes:
-            #     self._update_posterior_multinomial(m, data, mask)
-
             for m in modes:
                 self._update_posterior_multinomial(m, data, mask)
                 self._update_variational_params(m, data, mask)
@@ -267,7 +261,6 @@ class BPTF(BaseEstimator, TransformerMixin):
             #     self._update_beta(m)
 
             bound = self._elbo(data, mask)
-            # delta = (bound - curr_elbo) / abs(curr_elbo)
             delta = kahan_diff(bound, curr_elbo) / abs(curr_elbo)
             
             if verbose:
@@ -289,16 +282,16 @@ class BPTF(BaseEstimator, TransformerMixin):
                 if verbose:
                     progressbar.set_description('Change is small enough, early break')
                 break
-        print(f'Number of negative deltas: {len(neg_delta_list)}')
-        print(f'When do they occur? {neg_delta_when}')
-        print(f'what is their magnitude? {neg_delta_list}')
-        # print(f'List of elbos: {elbo_list}')
-        plt.plot(list(range(len(elbo_list))), elbo_list)
-        plt.xlabel('Iter')
-        plt.ylabel('Variational bound')
-        plt.yscale('log')
-        plt.title('ELBO trajectory for BPTF torch')
-        plt.show()
+        # print(f'Number of negative deltas: {len(neg_delta_list)}')
+        # print(f'When do they occur? {neg_delta_when}')
+        # print(f'what is their magnitude? {neg_delta_list}')
+        # # print(f'List of elbos: {elbo_list}')
+        # plt.plot(list(range(len(elbo_list))), elbo_list)
+        # plt.xlabel('Iter')
+        # plt.ylabel('Variational bound')
+        # plt.yscale('log')
+        # plt.title('ELBO trajectory for BPTF torch')
+        # plt.show()
 
     def _gamma_bound_term_torch(self, pa, pb, qa, qb, compute_constant=False):
         """
@@ -322,26 +315,6 @@ class BPTF(BaseEstimator, TransformerMixin):
         Computes the variational lower bound
         Terms that don't change over iterations are omitted
         """
-        # variational_bound = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.E_DK_M), mask=None)
-        # variational_bound = variational_bound if mask is None else variational_bound * mask
-        # variational_bound = -variational_bound.sum()
-
-        # for m in range(self.n_modes):
-        #     variational_bound += ((self.alpha + self.Epsilon_DK_M[m] - 1.) * torch.log(self.G_DK_M[m])).sum()
-        #     variational_bound += (-self.alpha*self.beta_M[m] * self.E_DK_M[m] + self.alpha * torch.log(self.beta_M[m])).sum()
-        #     variational_bound -= ((self.shp_DK_M[m] - 1)*self.E_DK_M[m] - self.rte_DK_M[m]*self.E_DK_M[m] + 
-        #                           self.shp_DK_M[m]*torch.log(self.rte_DK_M[m]) - torch.lgamma(self.shp_DK_M[m])).sum()
-        
-        # data = data if mask is None else data * mask
-        # ratio = tl.cp_tensor.cp_to_tensor(cp_tensor=(None, self.G_DK_M), mask=None)
-        # ratio /= ratio.sum(dim=-1, keepdim=True).clamp_min(self.epsilon)
-        # pos_multinomial_prob = data * ratio
-        # variational_bound -= (pos_multinomial_prob * torch.log(pos_multinomial_prob)).sum()
-
-        # return variational_bound
-        
-        # bound = []
-
         # no_mask = True if mask is None else False
         mask = torch.ones_like(data, dtype=torch.float64, device=self.device) if mask is None else mask
         uttkrp_DK =  unfolding_dot_khatri_rao(
@@ -351,70 +324,12 @@ class BPTF(BaseEstimator, TransformerMixin):
         )
         uttkrp_K = (self.E_DK_M[0] * uttkrp_DK).sum(dim=0)
         bound = -uttkrp_K.sum()
-        # print(bound)
-        # bound.append(-uttkrp_K.sum(dtype=torch.float64))
         assert torch.isfinite(uttkrp_K.sum()), "`bound` became NaN or Inf at first part"
 
-        # old method for second part
-        # data_recon = cp_to_tensor((None, self.G_DK_M))
-        # data_recon = data_recon if mask is None else data_recon * mask
-        # bound += (data * torch.log(
-        #     data_recon.clamp(min=self.epsilon)
-        # )).sum()
-
-        # data_recon = tl.cp_tensor.cp_to_tensor((None, self.G_DK_M))
-        # data_recon = cp_to_tensor((None, self.G_DK_M))
         for m in range(self.n_modes):
             assert (self.G_DK_M[m] > 0).all(), "Geometric mean is negative"
             assert torch.isfinite(self.G_DK_M[m]).all(), "Geometric mean blew up"
-        # assert (data_recon > 0).all(), "recon contains zeros"
-        # assert torch.isfinite(data_recon).all(), "recon blew up"
-
-        # From our earlier printouts, we know that the geomexp is OK. It's not infinite or NaN
-        # But data recon is, i.e. Y_hat
-        # So, what we need to do is do log(theta_1) + \dots + log(theta_d)
-        # then we multiply with y
-        # get the coords of the nonzeros, don't form the data recon tensor, and compute the logged values directly
-
-        # data_recon = data_recon if mask is None else data_recon * mask
-        # this part is a computational bottleneck
-        # runtime jumps from about 10s to 30s per iter
-        # obs_coords = mask.to(torch.bool).cpu()
-        # if no_mask:
-        #     log_data_recon = torch.log(data_recon.clamp(min=self.epsilon))
-        # else:
-        #     data_recon = data_recon.cpu()
-        #     data_recon = data_recon[obs_coords].to(self.device).clamp(min=self.epsilon)
-        #     log_data_recon = torch.log(data_recon)
-
-        #     data = data.cpu()
-        #     data = data[obs_coords].to(self.device)
-        # bound += (data * 
-        #           log_data_recon
-        # ).sum()
-        # if no_mask:
-        #     log_data_recon = torch.log(data_recon.clamp(min=self.epsilon))
-        # else:
-        #     obs_coords = mask.to(torch.bool)
-        #     data = torch.masked_select(data, obs_coords)
-        #     data_recon = torch.masked_select(data_recon, obs_coords).clamp(min=self.epsilon)
-        #     log_data_recon = torch.log(data_recon)
-        # bound += (data * log_data_recon).sum()
-        # else:
-        #     batch_size = 100000
-        #     coords = (mask == 1).nonzero(as_tuple=False)
-        #     for s in range(0, coords.size(0), batch_size):
-        #         sub = coords[s:s+batch_size]
-        #         data_batch = data[tuple(sub.T)]
-        #         data_recon_batch = data_recon[tuple(sub.T)].clamp(min=self.epsilon)
-        #         log_data_recon = torch.log(data_recon_batch)
-        #         bound += (data_batch * log_data_recon).sum()
-
-        # if no_mask:
-        #     coords = (data != 0).nonzero(as_tuple=False)
-        # else:
-        #     coords = ((mask == 1) & (data != 0)).nonzero(as_tuple=False)
-        # coords = ((data != 0) & (mask != 0)).nonzero(as_tuple=False)
+    
         batch_size = 10000
         log_G_DK_M = [torch.log(factor_matrix) for factor_matrix in self.G_DK_M]
         for s in range(0, self.nnz_coords.size(0), batch_size):
@@ -429,11 +344,8 @@ class BPTF(BaseEstimator, TransformerMixin):
             
             log_data_recon_batch = torch.logsumexp(log_data_recon_batch, dim=1)
 
-            # data_recon_batch = data_recon[tuple(sub.T)].clamp(min=self.epsilon)
-            # log_data_recon = torch.log(data_recon_batch)
             bound += (data_batch * log_data_recon_batch).sum()
-            # bound.append((data_batch * log_data_recon).sum(dtype=torch.float64))
-        # print(bound)
+            
         assert torch.isfinite(bound), "`bound` became NaN or Inf at second part"
         
         for m in range(self.n_modes):
@@ -447,24 +359,9 @@ class BPTF(BaseEstimator, TransformerMixin):
                 * self.data_shape[m] \
                 * self.alpha.item() \
                 * torch.log(self.beta_M[m].clamp(min=self.epsilon))
-            # bound.append(
-            #     self._gamma_bound_term_torch(pa=self.alpha,
-            #                                       pb=self.alpha * self.beta_M[m],
-            #                                       qa=self.shp_DK_M[m],
-            #                                       qb=self.rte_DK_M[m],
-            #                                       compute_constant=True).sum(dtype=torch.float64)
-            # )
-            # bound.append(
-            #     self.K \
-            #     * self.data_shape[m] \
-            #     * self.alpha.item() \
-            #     * torch.log(self.beta_M[m].clamp(min=self.epsilon))
-            # )
-        # print(bound)
+            
         assert torch.isfinite(bound), "`bound` became NaN or Inf at third part"
 
-        # bound = KahanSum(bound)
-        
         return bound
     
     def fit(self, data, mask=None, **kwargs):

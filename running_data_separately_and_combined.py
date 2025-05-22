@@ -43,10 +43,10 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-6
+tol = 1e-4
 max_iter = 10000
 device = 'cuda'
-end_year = 18
+end_year = 1
 if parallel:
     print(multiprocessing.cpu_count())
 
@@ -260,6 +260,19 @@ for model_name in model_list:
         elif os.path.isdir(path):
             shutil.rmtree(path)
 
+# handle folder for matching components
+matching_dir = os.path.join(folder_path, 'matching_components')
+if not os.path.isdir(matching_dir):
+    os.makedirs(matching_dir)
+    print(f'Created {matching_dir}')
+else:
+    for file_dir in tqdm(matching_dir):
+        if os.path.isdir(file_dir):
+            shutil.rmtree(file_dir)
+        else:
+            os.remove(file_dir)
+        print(f'Deleted {file_dir}')
+
 # get data ========================================================================================
 folder = "/icews_gdelt_terrier/"
 data_filepath = os.getcwd() + folder
@@ -392,6 +405,8 @@ del data
 # Fit BPTF ========================================================================================
 symmetry_counts = []
 
+models = []
+
 database_mapping = dict(zip(database_indices['database'], database_indices['index']))
 for model_name in model_list:
     print(f'Fitting for {model_name}')
@@ -417,6 +432,8 @@ for model_name in model_list:
 
     bptf_model = BPTF(data_shape=Y_.shape, n_components=n_components[model_name], device=device)
     bptf_model.fit(Y_, mask=mask, max_iter = max_iter, tol=tol, verbose=True)
+
+    models.append(bptf_model)
 
     # plot factors
     symmetry_count = 0
@@ -445,6 +462,88 @@ for model_name in model_list:
             symmetry_count += component_analysis_plot(component, path_to_save_plot, entropy_rank = None, database = model_name)
     
     symmetry_counts.append(symmetry_count)
+
+# combined, icews, gdelt, terrier
+# get all sender and receivers for all 4 models
+model_sender_receiver_list = []
+for model in models:
+    G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in model.G_DK_M]
+    G_DK_M = [factor_matrix / factor_matrix.sum(axis=0) for factor_matrix in G_DK_M]
+    
+    if len(G_DK_M) == 5:
+        database_factor_matrix = G_DK_M[4]
+        database_factor_matrix = database_factor_matrix/database_factor_matrix.sum(axis=0,keepdims=1)
+        database_entropy = st.entropy(database_factor_matrix, axis=0)
+        database_components = pd.DataFrame({
+            'entropy' : database_entropy,
+            'index' : range(n_components['combined'])
+        })
+    else:
+        database_components = pd.DataFrame({
+            'index' : range(n_components['icews'])
+        })
+
+    top_senders = []; top_receivers = []
+    for component_number in range(G_DK_M[0].shape[1]):
+
+        sender_vector = G_DK_M[0][:, component]
+        sender_vector = pd.DataFrame({
+            'sender' : sender_vector,
+            'index' : range(sender_vector.shape[0])})
+        sender_vector = pd.merge(
+            left=sender_vector, right=country_indices,
+            how='left', on='index'
+        ).sort_values(
+            by='sender', 
+            ascending=False).iloc[:10, :]
+        top_senders.append(sender_vector['country'].iloc[0])
+
+        receiver_vector = G_DK_M[1][:, component]
+        receiver_vector = pd.DataFrame({
+            'receiver' : receiver_vector,
+            'index' : range(receiver_vector.shape[0])})
+        receiver_vector = pd.merge(
+            left=receiver_vector, right=country_indices,
+            how='left', on='index'
+        ).sort_values(
+            by='receiver', ascending=False
+        ).iloc[:10, :]
+        top_receivers.append(receiver_vector['country'].iloc[0])
+
+    database_components['top_sender'] = top_senders
+    database_components['top_receiver'] = top_receivers
+    model_sender_receiver_list.append(database_components)
+
+model_sender_receiver_list = dict(zip(model_list, model_sender_receiver_list))
+models = dict(zip(model_list, models))
+
+combined_sender_receiver = model_sender_receiver_list['combined'].sort_values(by='entropy', ascending=False)
+combined_sender_receiver['entropy_rank'] = range(0, len(combined_sender_receiver))
+combined_sender_receiver.sort_values(by='index', inplace=True)
+for component_number in tqdm(range(len(combined_sender_receiver)), desc='Finding matching components'):
+    entropy_rank = combined_sender_receiver['entropy_rank'].iloc[component_number]
+    folder_to_save = os.path.join(matching_dir, f"entropy_rank_{entropy_rank}_component_{component_number}")
+    os.makedirs(folder_to_save)
+    
+    top_sender = combined_sender_receiver['top_sender'].iloc[component_number]
+    top_receiver = combined_sender_receiver['top_receiver'].iloc[component_number]
+
+    # save the combined model plot
+    G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in models['combined'].G_DK_M]
+    G_DK_M = [factor_matrix / factor_matrix.sum(axis=0) for factor_matrix in G_DK_M]
+    path_to_save = os.path.join(folder_to_save, f"entropy_rank_{entropy_rank}_component_{component}.png")
+    _ = component_analysis_plot(component_number, path_to_save, entropy_rank, database=None)
+    # search for matching components
+    for model_name in model_list[1:]:
+        matching_components = model_sender_receiver_list[model_name]
+        matching_components = matching_components[(matching_components['top_sender'] == top_sender) & (matching_components['top_receiver'] == top_receiver)]
+    # plot matching components
+        G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in models[model_name].G_DK_M]
+        G_DK_M = [factor_matrix / factor_matrix.sum(axis=0) for factor_matrix in G_DK_M]
+        for row in range(len(matching_components)):
+            idx = matching_components['index'].iloc[row]
+            path_to_save = os.path.join(folder_to_save, f"model_name_{model_name}_component_{idx}.png")
+            _ = component_analysis_plot(idx, path_to_save, entropy_rank = None, database = model_name)
 
 symmetry_counts = pd.DataFrame({
     'model': model_list,
