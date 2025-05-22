@@ -1,0 +1,33 @@
+Running on j002-ds   at Wed May 21 12:46:51 PM CDT 2025
+SLURM_JOB_ID = 434759
+srun --exclusive python running_data_separately_and_combined.py        --n_components_combined 300        --force_diagonals_zero
+/home/luiyusen/projects/bptf_new
+32
+Components for each model: {'combined': 300, 'icews': 100, 'gdelt': 100, 'terrier': 100}
+Forcing self-actions to 0
+running_data_separately_and_combined_plots_300_components/combined exists
+running_data_separately_and_combined_plots_300_components/icews exists
+running_data_separately_and_combined_plots_300_components/gdelt exists
+running_data_separately_and_combined_plots_300_components/terrier exists
+Removing self actions
+  database  index
+0  TERRIER      0
+1    ICEWS      1
+2    GDELT      2
+Fitting for combined
+Number of negative deltas: 0
+When do they occur? []
+what is their magnitude? []
+Fitting for icews
+Number of negative deltas: 0
+When do they occur? []
+what is their magnitude? []
+Fitting for gdelt
+Number of negative deltas: 0
+When do they occur? []
+what is their magnitude? []
+Fitting for terrier
+Number of negative deltas: 0
+When do they occur? []
+what is their magnitude? []
+Finished at Wed May 21 06:41:51 PM CDT 2025
