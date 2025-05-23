@@ -1,0 +1,29 @@
+Running on m001   at Fri May 23 09:45:16 AM CDT 2025
+SLURM_JOB_ID = 438605
+srun --exclusive python running_data_separately_and_combined.py        --n_components_combined 150        --n_components_per_database 150        
+/home/luiyusen/projects/bptf_new
+64
+Components for each model: {'combined': 150, 'icews': 150, 'gdelt': 150, 'terrier': 150}
+running_data_separately_and_combined_plots_150_150_components/combined exists
+running_data_separately_and_combined_plots_150_150_components/icews exists
+running_data_separately_and_combined_plots_150_150_components/gdelt exists
+running_data_separately_and_combined_plots_150_150_components/terrier exists
+Reset running_data_separately_and_combined_plots_150_150_components/matching_components
+  database  index
+0  TERRIER      0
+1    ICEWS      1
+2    GDELT      2
+Fitting for combined
+Fitting for icews
+Fitting for gdelt
+Fitting for terrier
+['ICEWS', 'TERRIER', 'GDELT', 'entropy', 'combined_index']
+     combined_index  icews_index  ...       entropy  entropy_rank
+92               92           42  ...  1.626488e-10             0
+146             146           68  ...  2.012087e-10             1
+13               13           89  ...  2.061222e-10             2
+143             143          146  ...  2.222456e-10             3
+100             100          122  ...  2.444306e-10             4
+
+[5 rows x 6 columns]
+Finished at Fri May 23 12:41:10 PM CDT 2025
