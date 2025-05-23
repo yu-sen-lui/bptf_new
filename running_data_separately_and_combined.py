@@ -54,7 +54,7 @@ parallel = True
 tol = 1e-6
 max_iter = 10000
 device = 'cuda'
-end_year = 18
+end_year = 18 # last 2 digits of end year
 if parallel:
     print(multiprocessing.cpu_count())
 
@@ -307,133 +307,157 @@ else:
     print(f'Reset {matching_dir}')
 
 # get data ========================================================================================
-folder = "/icews_gdelt_terrier/"
-data_filepath = os.getcwd() + folder
-files = os.listdir(data_filepath)
-data = [pd.read_csv(data_filepath + filepath) for filepath in tqdm(files, desc = 'Reading data')]
-data = pd.concat(data)
-data['formatteddate'] = pd.to_datetime(data['formatteddate'], format='%Y-%m-%d')
-cutoff = pd.to_datetime('2015-02-18')
-mask = ~((data['Database'] == 'GDELT') & (data['formatteddate'] <= cutoff))
-data = data.loc[mask]
-data['formatteddate'] = data['formatteddate'].dt.strftime('%Y-%m-%d')
+tensor_data_filepath = "running_data_separately_and_combined_tensor.pkl"
+namelists_filepath = "running_data_separately_and_combined_namelists.pkl"
 
-def read_gdeltv1(gdelt_filepath):
-    gdelt_chunk = pd.read_csv(
-        gdelt_filepath, dtype={
-            'Actor1CountryCode': str,
-            'Actor2countryCode': str,
-            'EventRootCode': np.int64,
-            'SQLDATE': str,
-            'NumMentions': np.int64
-        },
-        na_values='--'
-    )
-    gdelt_chunk = gdelt_chunk.rename(
-        columns={
-            'Actor1CountryCode' : 'Source_Country_Code',
-            'Actor2countryCode' : 'Target_Country_Code',
-            'EventRootCode' : 'CAMEO_Code',
-            'SQLDATE' : 'formatteddate',
-            'NumMentions' : 'Num_Events'
-        }
-    )
-    gdelt_chunk['formatteddate'] = pd.to_datetime(gdelt_chunk['formatteddate'].astype(str), format='%Y%m%d')
-    gdelt_chunk['formatteddate'] = gdelt_chunk['formatteddate'].dt.strftime('%Y-%m-%d')
+if os.path.isfile(tensor_data_filepath) and os.path.isfile(namelists_filepath):
 
-    return gdelt_chunk
+    print(f"{tensor_data_filepath} and {namelists_filepath} exist. Reading them now")
+    with open(tensor_data_filepath, "rb") as f:
+        Y = pickle.load(f)
+    with open(namelists_filepath, "rb") as f:
+        country_indices, date_indices, database_indices, action_indices = pickle.load(f)
 
-gdelt_filepaths = [os.path.join('gdeltv1', f) for f in os.listdir('gdeltv1')]
-gdelt1 = [read_gdeltv1(gdelt_filepath) for gdelt_filepath in tqdm(gdelt_filepaths, desc='Reading GDELTv1')]
-gdelt1 = pd.concat(gdelt1)
-gdelt1['Database'] = 'GDELT'
+else:
 
-data = pd.concat([data, gdelt1])
+    print(f"{tensor_data_filepath} and {namelists_filepath} do not exist. Creating them now")
+    folder = "/icews_gdelt_terrier/"
+    data_filepath = os.getcwd() + folder
+    files = os.listdir(data_filepath)
+    data = [pd.read_csv(data_filepath + filepath) for filepath in tqdm(files, desc = 'Reading data')]
+    data = pd.concat(data)
+    data['formatteddate'] = pd.to_datetime(data['formatteddate'], format='%Y-%m-%d')
+    cutoff = pd.to_datetime('2015-02-18')
+    mask = ~((data['Database'] == 'GDELT') & (data['formatteddate'] <= cutoff))
+    data = data.loc[mask]
+    data['formatteddate'] = data['formatteddate'].dt.strftime('%Y-%m-%d')
 
-del gdelt1
+    def read_gdeltv1(gdelt_filepath):
+        gdelt_chunk = pd.read_csv(
+            gdelt_filepath, dtype={
+                'Actor1CountryCode': str,
+                'Actor2countryCode': str,
+                'EventRootCode': np.int64,
+                'SQLDATE': str,
+                'NumMentions': np.int64
+            },
+            na_values='--'
+        )
+        gdelt_chunk = gdelt_chunk.rename(
+            columns={
+                'Actor1CountryCode' : 'Source_Country_Code',
+                'Actor2countryCode' : 'Target_Country_Code',
+                'EventRootCode' : 'CAMEO_Code',
+                'SQLDATE' : 'formatteddate',
+                'NumMentions' : 'Num_Events'
+            }
+        )
+        gdelt_chunk['formatteddate'] = pd.to_datetime(gdelt_chunk['formatteddate'].astype(str), format='%Y%m%d')
+        gdelt_chunk['formatteddate'] = gdelt_chunk['formatteddate'].dt.strftime('%Y-%m-%d')
 
-years = [str(2000 + x) for x in range(0, end_year)]
-data = data[data['formatteddate'].str.startswith(tuple(years))]
-data = data.dropna()
+        return gdelt_chunk
 
-if force_diagonals_zero:
-    print('Removing self actions')
-    data = data[data['Source_Country_Code'] != data['Target_Country_Code']]
+    gdelt_filepaths = [os.path.join('gdeltv1', f) for f in os.listdir('gdeltv1')]
+    gdelt1 = [read_gdeltv1(gdelt_filepath) for gdelt_filepath in tqdm(gdelt_filepaths, desc='Reading GDELTv1')]
+    gdelt1 = pd.concat(gdelt1)
+    gdelt1['Database'] = 'GDELT'
 
-data['formatteddate'] = data['formatteddate'].str[:7]
-data = data.groupby(['Source_Country_Code', 'Target_Country_Code', 'CAMEO_Code', 'formatteddate', 'Database'])
-data = data.sum().reset_index()
-data.sort_values(by=['Source_Country_Code', 'Target_Country_Code', 'Database', 'CAMEO_Code', 'formatteddate'], ascending=False, inplace=True)
+    data = pd.concat([data, gdelt1])
+
+    del gdelt1
+
+    years = [str(2000 + x) for x in range(0, 25)]
+    data = data[data['formatteddate'].str.startswith(tuple(years))]
+    data = data.dropna()
+
+    if force_diagonals_zero:
+        print('Removing self actions')
+        data = data[data['Source_Country_Code'] != data['Target_Country_Code']]
+
+    data['formatteddate'] = data['formatteddate'].str[:7]
+    data = data.groupby(['Source_Country_Code', 'Target_Country_Code', 'CAMEO_Code', 'formatteddate', 'Database'])
+    data = data.sum().reset_index()
+    data.sort_values(by=['Source_Country_Code', 'Target_Country_Code', 'Database', 'CAMEO_Code', 'formatteddate'], ascending=False, inplace=True)
 
 # Make the list of countries, actions, times and databases ========================================
 # get unique list of countries
-countries = pd.concat([data['Source_Country_Code'], data['Target_Country_Code']])
-countries = pd.unique(countries)
-country_indices = pd.DataFrame({
-    'country' : countries,
-    'index' : range(len(countries))
-})
-del countries
+    countries = pd.concat([data['Source_Country_Code'], data['Target_Country_Code']])
+    countries = pd.unique(countries)
+    country_indices = pd.DataFrame({
+        'country' : countries,
+        'index' : range(len(countries))
+    })
+    del countries
 
-# there's no need to get a list of actions since it's just 1 to 20
+    # there's no need to get a list of actions since it's just 1 to 20
 
-# get unique list of dates
-# Make sure to change the date format and frequency of the date range if you change the time unit
-date_indices = pd.date_range(
-    start=pd.to_datetime(data['formatteddate'], format='%Y-%m').min().strftime('%Y-%m'), 
-    end=pd.to_datetime(data['formatteddate'], format='%Y-%m').max().strftime('%Y-%m'),
-    freq='MS')
-date_indices = date_indices.strftime('%Y-%m').to_list()
-date_indices = pd.DataFrame({
-    'date' : date_indices,
-    'index' : range(len(date_indices))
-})
-date_indices['date'] = date_indices['date'].str[:7]
+    # get unique list of dates
+    # Make sure to change the date format and frequency of the date range if you change the time unit
+    date_indices = pd.date_range(
+        start=pd.to_datetime(data['formatteddate'], format='%Y-%m').min().strftime('%Y-%m'), 
+        end=pd.to_datetime(data['formatteddate'], format='%Y-%m').max().strftime('%Y-%m'),
+        freq='MS')
+    date_indices = date_indices.strftime('%Y-%m').to_list()
+    date_indices = pd.DataFrame({
+        'date' : date_indices,
+        'index' : range(len(date_indices))
+    })
+    date_indices['date'] = date_indices['date'].str[:7]
 
-# get unique list of databases
-databases = pd.unique(data['Database'])
-databases = pd.unique(databases)
-database_indices = pd.DataFrame({
-    'database' : databases,
-    'index' : range(len(databases))
-})
-print(database_indices)
-del databases
+    # get unique list of databases
+    databases = pd.unique(data['Database'])
+    databases = pd.unique(databases)
+    database_indices = pd.DataFrame({
+        'database' : databases,
+        'index' : range(len(databases))
+    })
+    print(database_indices)
+    del databases
 
-# action names
-actions = [
-    'Make public statement', 'Appeal', 'Express intent to cooperate', 'Consult', 'Engage in diplomatic cooperation',
-    'Engage in material cooperation', 'Provide aid', 'Yield', 'Investigate', 'Demand',
-    'Disapprove', 'Reject', 'Threaten', 'Protest', 'Exhibit military posture',
-    'Reduce relations', 'Coerce', 'Assault', 'Fight', 'Engage in unconventional mass violence'
-]
-action_indices = pd.DataFrame({
-    'action' : actions,
-    'index' : range(len(actions))
-})
+    # action names
+    actions = [
+        'Make public statement', 'Appeal', 'Express intent to cooperate', 'Consult', 'Engage in diplomatic cooperation',
+        'Engage in material cooperation', 'Provide aid', 'Yield', 'Investigate', 'Demand',
+        'Disapprove', 'Reject', 'Threaten', 'Protest', 'Exhibit military posture',
+        'Reduce relations', 'Coerce', 'Assault', 'Fight', 'Engage in unconventional mass violence'
+    ]
+    action_indices = pd.DataFrame({
+        'action' : actions,
+        'index' : range(len(actions))
+    })
+    namelists = [country_indices, date_indices, database_indices, action_indices]
 
 # Convert to sparse tensor ========================================================================
-n_batches = 1000
-n = 10
+    n_batches = 1000
+    n = 10
 
-data = np.array_split(data, n_batches)
+    data = np.array_split(data, n_batches)
 
-if parallel:
-    num_cores = multiprocessing.cpu_count()
+    if parallel:
+        num_cores = multiprocessing.cpu_count()
 
-    if __name__ == '__main__':
-        data = Parallel(n_jobs = num_cores)(
-            delayed(dataframe_to_sparse_tensor)(batch, country_indices, date_indices, database_indices)
-            for batch in tqdm(data, desc='Converting to sparse tensors')
-        )
-else:
-    data = [dataframe_to_sparse_tensor(batch, country_indices, date_indices, database_indices) for batch in tqdm(data, desc='Converting to sparse tensors')]
+        if __name__ == '__main__':
+            data = Parallel(n_jobs = num_cores)(
+                delayed(dataframe_to_sparse_tensor)(batch, country_indices, date_indices, database_indices)
+                for batch in tqdm(data, desc='Converting to sparse tensors')
+            )
+    else:
+        data = [dataframe_to_sparse_tensor(batch, country_indices, date_indices, database_indices) for batch in tqdm(data, desc='Converting to sparse tensors')]
 
-while len(data) > 10:
-    data = [data[i:i + n] for i in range(0, len(data), n)]
-    data = [sum(batch) for batch in data]
-Y = sum(data)
-del data
+    while len(data) > 10:
+        data = [data[i:i + n] for i in range(0, len(data), n)]
+        data = [sum(batch) for batch in data]
+    Y = sum(data)
+    del data
+
+    with open(tensor_data_filepath, "wb") as f:
+        pickle.dump(Y, f)
+    with open(namelists_filepath, "wb") as f:
+        pickle.dump(namelists, f)
+
+# subsetting for end_year
+end_year_index = 12*(end_year + 1)
+Y = Y[:, :, :, :(end_year_index + 1),:]
 
 # Fit BPTF ========================================================================================
 symmetry_counts = []
@@ -447,7 +471,7 @@ for model_name in model_list:
         Y_ = Y.todense()
         diagonal_indices = np.arange(0, Y_.shape[0])
         mask = np.ones(Y_.shape)
-        mask[diagonal_indices, diagonal_indices, :, :, :] = 1
+        mask[diagonal_indices, diagonal_indices, :, :, :] = 0
         mask = mask.astype(np.int64)
         mask = torch.tensor(mask, dtype=torch.float64, device=device)
 
@@ -457,7 +481,7 @@ for model_name in model_list:
         Y_ = Y[:, :, :, :, database_index].todense()
         diagonal_indices = np.arange(0, Y_.shape[0])
         mask = np.ones(Y_.shape)
-        mask[diagonal_indices, diagonal_indices, :, :] = 1
+        mask[diagonal_indices, diagonal_indices, :, :] = 0
         mask = mask.astype(np.int64)
         mask = torch.tensor(mask, dtype=torch.float64, device=device)
 
@@ -523,7 +547,7 @@ print(database_components.columns.tolist())
 database_components = database_components[['combined_index', 'entropy']]
 assignments.append(database_components)
 assignments = reduce(lambda left, right: pd.merge(left, right, on='combined_index', how='outer'), assignments)
-assignments.sort_values(by='entropy', inplace=True)
+assignments.sort_values(by='entropy', ascending=False, inplace=True)
 assignments['entropy_rank'] = list(range(len(assignments)))
 print(assignments.head())
 
