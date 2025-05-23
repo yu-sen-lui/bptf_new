@@ -51,10 +51,10 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-6
+tol = 1e-2
 max_iter = 10000
 device = 'cuda'
-end_year = 18 # last 2 digits of end year
+end_year = 1 # last 2 digits of end year
 if parallel:
     print(multiprocessing.cpu_count())
 
@@ -428,7 +428,7 @@ else:
     namelists = [country_indices, date_indices, database_indices, action_indices]
 
 # Convert to sparse tensor ========================================================================
-    n_batches = 1000
+    n_batches = 10000
     n = 10
 
     data = np.array_split(data, n_batches)
