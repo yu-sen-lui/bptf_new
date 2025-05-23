@@ -27,8 +27,9 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate bptf                         # <-- your env
 
 # grab first positional arg (or fall back to 150)
-N_COMBINED=${1:-150}
-FORCE_ZERO=${2:-false}
+N_COMBINED="${1:-150}"
+N_DATABASE="${2:--1}"
+FORCE_ZERO="${3:-false}"
 
 # limit NumPy / MKL threads to the cores we asked for
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
@@ -40,10 +41,12 @@ export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 echo "srun --exclusive python running_data_separately_and_combined.py \
        --n_components_combined ${N_COMBINED} \
+       --n_components_per_database ${N_DATABASE} \
        $( [[ $FORCE_ZERO == true ]] && echo "--force_diagonals_zero" )"
 
 srun --exclusive python running_data_separately_and_combined.py \
       --n_components_combined "${N_COMBINED}" \
+      --n_components_per_database ${N_DATABASE} \
       $( [[ $FORCE_ZERO == true ]] && echo "--force_diagonals_zero" )
 
 echo "Finished at $(date)"

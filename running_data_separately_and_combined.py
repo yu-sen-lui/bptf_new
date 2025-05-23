@@ -63,9 +63,9 @@ assert n_components_per_database > 0, f"{n_components_per_database} < 0 not allo
 
 n_components = {
     "combined": args.n_components_combined,
-    "icews": int(round(args.n_components_combined / 3)),
-    "gdelt": int(round(args.n_components_combined / 3)),
-    "terrier": int(round(args.n_components_combined / 3)),
+    "icews": n_components_per_database,
+    "gdelt": n_components_per_database,
+    "terrier": n_components_per_database,
 }
 
 print(f'Components for each model: {n_components}')
@@ -280,7 +280,7 @@ def generate_cost_matrix(G_1, G_2):
 
 model_list = ['combined', 'icews', 'gdelt', 'terrier']
 
-folder_path = f"running_data_separately_and_combined_plots_{n_components['combined']}_components"
+folder_path = f"running_data_separately_and_combined_plots_{n_components['combined']}_{n_components['gdelt']}_components"
 
 for model_name in model_list:
     plot_folder_path = os.path.join(folder_path, model_name)
