@@ -522,7 +522,7 @@ database_components.rename(columns={
 print(database_components.columns.tolist())
 database_components = database_components[['combined_index', 'entropy']]
 assignments.append(database_components)
-assignments = reduce(lambda left, right: pd.merge(left, right, on='combined_index', how='inner'), assignments)
+assignments = reduce(lambda left, right: pd.merge(left, right, on='combined_index', how='outer'), assignments)
 assignments.sort_values(by='entropy', inplace=True)
 assignments['entropy_rank'] = list(range(len(assignments)))
 print(assignments.head())
@@ -545,6 +545,10 @@ for row in tqdm(range(len(assignments)), desc="Plotting matching groups"):
                                 database=None)
     for model_name in model_list[1:]:
         component = assignments[f"{model_name}_index"].iloc[row]
+        if pd.isna(component):
+            continue
+        else:
+            component = int(component)
         _ = component_analysis_plot(factor_matrices[model_name], 
                                     component, 
                                     os.path.join(folder_to_save_to, f"model_name_{model_name}_component_{component}.png"), 
