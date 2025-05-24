@@ -11,3 +11,16 @@ running_data_separately_and_combined_plots_150_150_components/terrier exists
 Reset running_data_separately_and_combined_plots_150_150_components/matching_components
 running_data_separately_and_combined_tensor.pkl and running_data_separately_and_combined_namelists.pkl exist. Reading them now
 Fitting for combined
+Fitting for icews
+Fitting for gdelt
+Fitting for terrier
+['ICEWS', 'TERRIER', 'GDELT', 'entropy', 'combined_index']
+     combined_index  icews_index  ...   entropy  entropy_rank
+56               56          103  ...  0.554036             0
+127             127           26  ...  0.463818             1
+15               15           83  ...  0.407836             2
+102             102          136  ...  0.323096             3
+128             128           75  ...  0.310736             4
+
+[5 rows x 6 columns]
+Finished at Fri May 23 07:48:31 PM CDT 2025
