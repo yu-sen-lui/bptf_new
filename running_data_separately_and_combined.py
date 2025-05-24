@@ -51,10 +51,10 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-6
+tol = 1e-2
 max_iter = 10000
 device = 'cuda'
-end_year = 18 # last 2 digits of end year
+end_year = 2 # last 2 digits of end year
 if parallel:
     print(multiprocessing.cpu_count())
 
@@ -219,9 +219,16 @@ def component_analysis_plot(G_DK_M, component, path_to_save, entropy_rank = None
     action_vector = G_DK_M[2][:, component]
     action_vector = pd.DataFrame({
         'action' : action_vector,
-        'action type' : range(1, 21)
+        'action type' : range(20)
     })
     ax4.vlines(x=action_vector['action type'], ymin=0, ymax=action_vector['action'], color='black')
+    ax4.set_xticks(action_vector['action type'])
+    ax4.set_xticklabels(
+        action_indices['action'],
+        rotation=90,
+        ha='center'
+    )
+    ax4.tick_params(axis='x', labelsize=8)
     ax4.set_title('Action types')
     
     if database is None:
