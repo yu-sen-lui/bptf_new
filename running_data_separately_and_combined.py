@@ -555,6 +555,7 @@ print(assignments.head())
 factor_matrices = []
 for model_name in model_list:
     G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in models[model_name].G_DK_M]
+    G_DK_M = [factor_matrix / factor_matrix.sum(axis=0) for factor_matrix in G_DK_M]
     factor_matrices.append(G_DK_M)
 factor_matrices = dict(zip(model_list, factor_matrices))
 for row in tqdm(range(len(assignments)), desc="Plotting matching groups"):
