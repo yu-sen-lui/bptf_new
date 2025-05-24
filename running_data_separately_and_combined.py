@@ -225,7 +225,7 @@ def component_analysis_plot(G_DK_M, component, path_to_save, entropy_rank = None
     ax4.set_xticks(action_vector['action type'])
     ax4.set_xticklabels(
         action_indices['action'],
-        rotation=90,
+        rotation=45,
         ha='center'
     )
     ax4.tick_params(axis='x', labelsize=8)
