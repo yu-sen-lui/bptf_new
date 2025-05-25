@@ -51,7 +51,7 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-6
+tol = 1e-2
 max_iter = 10000
 device = 'cuda'
 end_year = 18 # last 2 digits of end year
@@ -502,7 +502,7 @@ for model_name in model_list:
     # plot factors
     symmetry_count = 0
     G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in bptf_model.G_DK_M]
-    G_DK_M = [factor_matrix / factor_matrix.sum(axis=0) for factor_matrix in G_DK_M]
+    G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for factor_matrix in G_DK_M]
     if model_name == 'combined':
         database_factor_matrix = G_DK_M[4]
         database_factor_matrix = database_factor_matrix/database_factor_matrix.sum(axis=0,keepdims=1)
@@ -531,9 +531,11 @@ models = dict(zip(model_list, models))
 
 # Find most similar components
 combined_G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in models["combined"].G_DK_M[:4]]
+combined_G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for factor_matrix in combined_G_DK_M]
 cost_matrices = []
 for model_name in model_list[1:]:
     G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in models[model_name].G_DK_M]
+    G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for factor_matrix in G_DK_M]
     cost_matrices.append(generate_cost_matrix(combined_G_DK_M, G_DK_M))
 
 cost_matrices = dict(zip(model_list[1:], cost_matrices))
@@ -562,7 +564,7 @@ print(assignments.head())
 factor_matrices = []
 for model_name in model_list:
     G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in models[model_name].G_DK_M]
-    G_DK_M = [factor_matrix / factor_matrix.sum(axis=0) for factor_matrix in G_DK_M]
+    G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for factor_matrix in G_DK_M]
     factor_matrices.append(G_DK_M)
 factor_matrices = dict(zip(model_list, factor_matrices))
 for row in tqdm(range(len(assignments)), desc="Plotting matching groups"):
