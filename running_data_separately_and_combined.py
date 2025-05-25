@@ -51,7 +51,7 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-2
+tol = 1e-6
 max_iter = 10000
 device = 'cuda'
 end_year = 18 # last 2 digits of end year
@@ -158,7 +158,7 @@ def component_analysis_plot(G_DK_M, component, path_to_save, entropy_rank = None
     """
     Plots bptf factor vectors
     Args:
-        G_DK_M: list of factor matrices
+        G_DK_M: list of numpy factor matrices
         component: column of factor matrix
         entropy_rank: if ranking by entropy, use this. You can leave this as a blank str
         path_to_save: path to save png plot, relative to working directory
@@ -166,6 +166,9 @@ def component_analysis_plot(G_DK_M, component, path_to_save, entropy_rank = None
     Returns:
         symmetric: binary. 1 if top sender is the same as top receiver
     """
+
+    # Normalise factor matrices by rowsums
+    G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for factor_matrix in G_DK_M]
 
     fig = plt.figure(figsize=(20, 18))
     gs = fig.add_gridspec(3, 2, height_ratios=[1, 1, 1])
@@ -502,7 +505,6 @@ for model_name in model_list:
     # plot factors
     symmetry_count = 0
     G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in bptf_model.G_DK_M]
-    G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for factor_matrix in G_DK_M]
     if model_name == 'combined':
         database_factor_matrix = G_DK_M[4]
         database_factor_matrix = database_factor_matrix/database_factor_matrix.sum(axis=0,keepdims=1)
@@ -564,7 +566,6 @@ print(assignments.head())
 factor_matrices = []
 for model_name in model_list:
     G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in models[model_name].G_DK_M]
-    G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for factor_matrix in G_DK_M]
     factor_matrices.append(G_DK_M)
 factor_matrices = dict(zip(model_list, factor_matrices))
 for row in tqdm(range(len(assignments)), desc="Plotting matching groups"):
