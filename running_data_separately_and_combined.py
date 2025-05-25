@@ -51,10 +51,10 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-2
+tol = 1e-6
 max_iter = 10000
 device = 'cuda'
-end_year = 2 # last 2 digits of end year
+end_year = 18 # last 2 digits of end year
 if parallel:
     print(multiprocessing.cpu_count())
 
@@ -225,7 +225,7 @@ def component_analysis_plot(G_DK_M, component, path_to_save, entropy_rank = None
     ax4.set_xticks(action_vector['action type'])
     ax4.set_xticklabels(
         action_indices['action'],
-        rotation=45,
+        rotation=90,
         ha='center'
     )
     ax4.tick_params(axis='x', labelsize=8)
