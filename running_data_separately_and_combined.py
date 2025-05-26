@@ -51,7 +51,7 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-8
+tol = 1e-6
 max_iter = 10000
 device = 'cuda'
 end_year = 18 # last 2 digits of end year
