@@ -54,7 +54,7 @@ parallel = True
 tol = 1e-6
 max_iter = 10000
 device = 'cuda'
-end_year = 18 # last 2 digits of end year
+end_year = 2 # last 2 digits of end year
 if parallel:
     print(multiprocessing.cpu_count())
 
@@ -167,8 +167,11 @@ def component_analysis_plot(G_DK_M, component, path_to_save, entropy_rank = None
         symmetric: binary. 1 if top sender is the same as top receiver
     """
 
-    # Normalise factor matrices by rowsums
-    G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for factor_matrix in G_DK_M]
+    # Normalise factor matrices by colsums for sender, receiver, actor and time matrices, but rowsums for dataset matrix
+    G_DK_M[-1] = G_DK_M[-1] / G_DK_M[-1].sum(axis=1, keepdims=True)
+    for factor_matrix in range(len(G_DK_M) - 1):
+        M = G_DK_M[factor_matrix]
+        G_DK_M[factor_matrix] = M / M.sum(axis=0, keepdims=True)
 
     fig = plt.figure(figsize=(20, 18))
     gs = fig.add_gridspec(3, 2, height_ratios=[1, 1, 1])
