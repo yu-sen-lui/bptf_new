@@ -168,10 +168,7 @@ def component_analysis_plot(G_DK_M, component, path_to_save, entropy_rank = None
     """
 
     # Normalise factor matrices by colsums for sender, receiver, actor and time matrices, but rowsums for dataset matrix
-    G_DK_M[-1] = G_DK_M[-1] / G_DK_M[-1].sum(axis=1, keepdims=True)
-    for factor_matrix in range(len(G_DK_M) - 1):
-        M = G_DK_M[factor_matrix]
-        G_DK_M[factor_matrix] = M / M.sum(axis=0, keepdims=True)
+    G_DK_M = process_factor_matrices(G_DK_M)
 
     fig = plt.figure(figsize=(20, 18))
     gs = fig.add_gridspec(3, 2, height_ratios=[1, 1, 1])
@@ -264,6 +261,25 @@ def component_analysis_plot(G_DK_M, component, path_to_save, entropy_rank = None
     top_receiver = receiver_vector['country'].iloc[0]
     symmetric = 1 if top_sender == top_receiver else 0
     return symmetric
+
+def process_factor_matrices(G_DK_M):
+    """
+    Divides the first 4 matrices by the colsums, and the last factor matrix by rowsums
+    Args:
+        G_DK_M: List of numpy arrays
+    Returns:
+        G_DK_M
+    """
+    assert len(G_DK_M) == 5 or len(G_DK_M) == 4, f'{len(G_DK_M)} is wrong'
+    if len(G_DK_M) == 4:
+        G_DK_M = [factor_matrix / factor_matrix.sum(axis=0, keepdims=True) for factor_matrix in G_DK_M]
+    else:
+        G_DK_M[-1] = G_DK_M[-1] / G_DK_M[-1].sum(axis=1, keepdims=True)
+        for factor_matrix in range(len(G_DK_M) - 1):
+            M = G_DK_M[factor_matrix]
+            G_DK_M[factor_matrix] = M / M.sum(axis=0, keepdims=True)
+    
+    return G_DK_M
 
 def generate_cost_matrix(G_1, G_2):
     """
@@ -536,11 +552,11 @@ models = dict(zip(model_list, models))
 
 # Find most similar components
 combined_G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in models["combined"].G_DK_M[:4]]
-combined_G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for factor_matrix in combined_G_DK_M]
+combined_G_DK_M = process_factor_matrices(combined_G_DK_M)
 cost_matrices = []
 for model_name in model_list[1:]:
     G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in models[model_name].G_DK_M]
-    G_DK_M = [factor_matrix / factor_matrix.sum(axis=0, keepdims=True) for factor_matrix in G_DK_M]
+    G_DK_M = process_factor_matrices(G_DK_M)
     cost_matrices.append(generate_cost_matrix(combined_G_DK_M, G_DK_M))
 
 cost_matrices = dict(zip(model_list[1:], cost_matrices))
