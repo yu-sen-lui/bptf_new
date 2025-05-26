@@ -51,10 +51,10 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-6
+tol = 1e-4
 max_iter = 10000
 device = 'cuda'
-end_year = 2 # last 2 digits of end year
+end_year = 1 # last 2 digits of end year
 if parallel:
     print(multiprocessing.cpu_count())
 
@@ -540,7 +540,7 @@ combined_G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for 
 cost_matrices = []
 for model_name in model_list[1:]:
     G_DK_M = [factor_matrix.cpu().numpy() for factor_matrix in models[model_name].G_DK_M]
-    G_DK_M = [factor_matrix / factor_matrix.sum(axis=1, keepdims=True) for factor_matrix in G_DK_M]
+    G_DK_M = [factor_matrix / factor_matrix.sum(axis=0, keepdims=True) for factor_matrix in G_DK_M]
     cost_matrices.append(generate_cost_matrix(combined_G_DK_M, G_DK_M))
 
 cost_matrices = dict(zip(model_list[1:], cost_matrices))

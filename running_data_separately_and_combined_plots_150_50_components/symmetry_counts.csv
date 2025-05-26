@@ -1,5 +1,5 @@
 ,model,components,symmetry_counts,proportion
-0,combined,150,128,0.8533333333333334
-1,icews,50,37,0.74
-2,gdelt,50,41,0.82
-3,terrier,50,29,0.58
+0,combined,150,114,0.76
+1,icews,50,38,0.76
+2,gdelt,50,37,0.74
+3,terrier,50,26,0.52
