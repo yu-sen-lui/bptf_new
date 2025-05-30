@@ -4,7 +4,7 @@
 ###############################################################################
 #SBATCH --job-name=running_data_separately_and_combined         # anything short & descriptive
 #SBATCH --partition=general            # = -p general
-#SBATCH --gpus=1              # ask for 1 GPU, any model
+#SBATCH --gpus=h100:1              # ask for 1 GPU, any model
 #SBATCH --cpus-per-task=16             # = --cpus-per-task=16
 #SBATCH --mem=200G                     # = --mem 200000   (200 GB)
 #SBATCH --time=10:00:00                # 600 minutes = 10 hours

@@ -51,7 +51,7 @@ gc.collect()
 
 # Global variables and settings ===================================================================
 parallel = True
-tol = 1e-6
+tol = 1e-8
 max_iter = 10000
 device = 'cuda'
 end_year = 18 # last 2 digits of end year
@@ -71,8 +71,6 @@ n_components = {
 print(f'Components for each model: {n_components}')
 
 force_diagonals_zero = args.force_diagonals_zero
-if force_diagonals_zero:
-    print('Forcing self-actions to 0')
 
 def dataframe_to_sparse_tensor(data, country_indices, date_indices, database_indices, cameo_col='CAMEO_Code', events_col='Num_Events'):
     """
@@ -399,10 +397,6 @@ else:
     data = data[data['formatteddate'].str.startswith(tuple(years))]
     data = data.dropna()
 
-    if force_diagonals_zero:
-        print('Removing self actions')
-        data = data[data['Source_Country_Code'] != data['Target_Country_Code']]
-
     data['formatteddate'] = data['formatteddate'].str[:7]
     data = data.groupby(['Source_Country_Code', 'Target_Country_Code', 'CAMEO_Code', 'formatteddate', 'Database'])
     data = data.sum().reset_index()
@@ -487,6 +481,13 @@ else:
 # subsetting for end_year
 end_year_index = 12*(end_year + 1)
 Y = Y[:, :, :, :(end_year_index + 1),:]
+
+if force_diagonals_zero:
+    print('Removing self actions')
+    diagonal_indices = np.arange(0, Y.shape[0])
+    Y = Y.todense()
+    Y[diagonal_indices, diagonal_indices, :, :, :] = 0
+    Y = sparse.COO(Y)
 
 # Fit BPTF ========================================================================================
 symmetry_counts = []
