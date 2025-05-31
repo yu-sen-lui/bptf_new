@@ -517,6 +517,9 @@ for model_name in model_list:
 
         Y_ = torch.tensor(Y_, dtype=torch.float64, device = device)
 
+    if force_diagonals_zero:
+        mask = None
+
     bptf_model = BPTF(data_shape=Y_.shape, n_components=n_components[model_name], device=device)
     bptf_model.fit(Y_, mask=mask, max_iter = max_iter, tol=tol, verbose=True)
 

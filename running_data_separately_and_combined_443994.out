@@ -1,0 +1,27 @@
+Running on l001.ds.uchicago.edu   at Fri May 30 05:46:21 PM CDT 2025
+SLURM_JOB_ID = 443994
+srun --exclusive python running_data_separately_and_combined.py        --n_components_combined 150        --n_components_per_database 50        --force_diagonals_zero
+/home/luiyusen/projects/bptf_new
+96
+Components for each model: {'combined': 150, 'icews': 50, 'gdelt': 50, 'terrier': 50}
+running_data_separately_and_combined_plots_150_50_components/combined exists
+running_data_separately_and_combined_plots_150_50_components/icews exists
+running_data_separately_and_combined_plots_150_50_components/gdelt exists
+running_data_separately_and_combined_plots_150_50_components/terrier exists
+Reset running_data_separately_and_combined_plots_150_50_components/matching_components
+running_data_separately_and_combined_tensor.pkl and running_data_separately_and_combined_namelists.pkl exist. Reading them now
+Removing self actions
+Fitting for combined
+Fitting for icews
+Fitting for gdelt
+Fitting for terrier
+['ICEWS', 'TERRIER', 'GDELT', 'entropy', 'combined_index']
+     combined_index  icews_index  ...   entropy  entropy_rank
+112             112         49.0  ...  0.638754             0
+107             107         14.0  ...  0.405863             1
+55               55          9.0  ...  0.322896             2
+15               15          NaN  ...  0.294942             3
+5                 5          NaN  ...  0.259713             4
+
+[5 rows x 6 columns]
+Finished at Sat May 31 12:00:21 AM CDT 2025
