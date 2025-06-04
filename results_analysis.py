@@ -37,15 +37,16 @@ def read_gdeltv1(gdelt_filepath):
 
     return gdelt_chunk
 
-def get_counts(data, country_list, year_list):
+def get_counts(dataframe, country_list, year_list):
     """
     Gets the event counts for all country pairings possible in country_list from data
     """
     country_pairings = list(permutations(country_list, 2))
-    data = data.copy()
-    data['formatteddate'] = pd.to_datetime(data['formatteddate'], format='%Y-%m')
-    mask = data['formatteddate'].dt.year.isin(year_list)
-    data = data.loc[mask]
+    data = dataframe.copy()
+    # data['formatteddate'] = pd.to_datetime(data['formatteddate'], format='%Y-%m')
+    # mask = data['formatteddate'].dt.year.isin(year_list)
+    # data = data.loc[mask]
+    data = data[data['formatteddate'].str.startswith(tuple(year_list))]
     event_count = 0
     for country_pairing in country_pairings:
         sender, receiver = country_pairing
@@ -85,35 +86,50 @@ data = data.dropna()
 data['formatteddate'] = data['formatteddate'].str[:7]
 data = data.groupby(['Source_Country_Code', 'Target_Country_Code', 'CAMEO_Code', 'formatteddate', 'Database'])
 data = data.sum().reset_index()
-data.sort_values(by=['Source_Country_Code', 'Target_Country_Code', 'Database', 'CAMEO_Code', 'formatteddate'], ascending=False, inplace=True)
+# data.sort_values(by=['Source_Country_Code', 'Target_Country_Code', 'Database', 'CAMEO_Code', 'formatteddate'], ascending=False, inplace=True)
 
 # list out countries for each named component =====================================================
-ranks = []; components = []; countries = []; years = []; actions = []; counts = []
+ranks = []; components = []; countries = []; years = []; actions = []; matched_databases = []; counts = []
 
 # entropy_rank_1_component_127_IND_PAK_standoff
 ranks.append(1); components.append(127); countries.append(['IND', 'PAK'])
+matched_databases.append(3)
 year_list = [str(2000 + x) for x in range(8, 16)]
 years.append(year_list)
 
 # entropy_rank_3_component_128_ISR_PSE_conflict
 ranks.append(3); components.append(128); countries.append(['ISR', 'PSE'])
+matched_databases.append(3)
 year_list = ['2008', '2009', '2012', '2014']
 years.append(year_list)
 
 # entropy_rank_4_component_26_LBN_ISR_conflict
 ranks.append(4); components.append(26); countries.append(['LBN', 'ISR'])
+matched_databases.append(1)
 year_list = ['2006', '2010', '2014', '2015']
 years.append(year_list)
 
 # entropy_rank_7_component_96_AUS_IDN_spying
+ranks.append(7); components.append(96); countries.append(['AUS', 'IDN'])
+matched_databases.append(3)
+year_list = ['2013', '2014', '2015']
+years.append(year_list)
 
 # entropy_rank_8_component_41_USA_AFG_war
+ranks.append(8); components.append(41); countries.append(['USA', 'AFG'])
+matched_databases.append(1)
+year_list = ['2001'] + [str(2000 + x) for x in range(7, 13)]
+years.append(year_list)
 
 # entropy_rank_9_component_136_Snowden_discussions
 
 # entropy_rank_10_component_81_SAU_UAE_QAT_sever_diplo_relations
 
 # entropy_rank_13_component_94_Andean_diplomatic_crisis
+ranks.append(13); components.append(94); countries.append(['COL', 'VEN', 'ECU'])
+matched_databases.append(2)
+year_list = [str(2000 + x) for x in range(8, 20)]
+years.append(year_list)
 
 # entropy_rank_14_component_48_Iraqi_freedom
 
@@ -150,10 +166,18 @@ years.append(year_list)
 # entropy_rank_41_component_3_RUS_UKR_war
 
 # entropy_rank_43_component_88_PRK
+ranks.append(43); components.append(88); countries.append(['PRK', 'KOR', 'CHN', 'JPN', 'USA'])
+matched_databases.append(0)
+year_list = ['2003', '2006', '2009', '2010', '2012']
+years.append(year_list)
 
 # entropy_rank_47_component_67_PRK_USA_relations
 
 # entropy_rank_48_component_83_South_Sudanese_civil_war
+ranks.append(48); components.append(83); countries.append(['SSD', 'SDN'])
+matched_databases.append(0)
+year_list = [str(2000 + x) for x in range(13, 16)]
+years.append(year_list)
 
 # entropy_rank_49_component_100_EGY_protests_EGY_closes_path_to_Gaza
 
@@ -164,8 +188,11 @@ for i in tqdm(range(len(ranks))):
 total_counts = pd.DataFrame({
     'rank': ranks,
     'component': components,
+    'num_matched_datasets': matched_databases,
     'actors': countries,
     'event_count': counts
 })
 
 print(total_counts)
+
+total_counts.to_csv(csv_filepath)
