@@ -122,8 +122,16 @@ year_list = ['2001'] + [str(2000 + x) for x in range(7, 13)]
 years.append(year_list)
 
 # entropy_rank_9_component_136_Snowden_discussions
+ranks.append(9); components.append(136); countries.append(['VEN', 'CUB', 'RUS'])
+matched_databases.append(0)
+year_list = ['2013']
+years.append(year_list)
 
 # entropy_rank_10_component_81_SAU_UAE_QAT_sever_diplo_relations
+ranks.append(10); components.append(81); countries.append(['SAU', 'UAE', 'QAT'])
+matched_databases.append(2)
+year_list = [str(2000 + x) for x in range(0, 16)]
+years.append(year_list)
 
 # entropy_rank_13_component_94_Andean_diplomatic_crisis
 ranks.append(13); components.append(94); countries.append(['COL', 'VEN', 'ECU'])
@@ -132,20 +140,52 @@ year_list = [str(2000 + x) for x in range(8, 20)]
 years.append(year_list)
 
 # entropy_rank_14_component_48_Iraqi_freedom
+ranks.append(14); components.append(48); countries.append(['USA', 'IRQ'])
+matched_databases.append(0)
+year_list = ['2013']
+years.append(year_list)
 
 # entropy_rank_15_component_71_2nd_swat_and_USA_increased_forces_in_PAK
+ranks.append(15); components.append(71); countries.append(['USA', 'AFG', 'PAK'])
+matched_databases.append(0)
+year_list = [str(2000 + x) for x in range(9, 16)]
+years.append(year_list)
 
 # entropy_rank_16_component_110_SDN_intl_crisis
+ranks.append(16); components.append(110); countries.append(['SDN', 'USA', 'AFR', 'EGY', 'TCD'])
+matched_databases.append(3)
+year_list = [str(2000 + x) for x in range(6, 15)]
+years.append(year_list)
 
 # entropy_rank_17_component_113_CHN_JPN_KOR_summit
+ranks.append(17); components.append(113); countries.append(['CHN', 'JPN', 'KOR'])
+matched_databases.append(1)
+year_list = [str(2000 + x) for x in range(11, 13)]
+years.append(year_list)
 
 # entropy_rank_22_component_52_falklands_dispute
+ranks.append(22); components.append(52); countries.append(['ARG', 'GBR'])
+matched_databases.append(0)
+year_list = ['2010', '2012', '2013']
+years.append(year_list)
 
 # entropy_rank_27_component_91_IRQ_USA_conflict
+ranks.append(27); components.append(91); countries.append(['USA', 'IRQ'])
+matched_databases.append(3)
+year_list = [str(2000 + x) for x in range(6, 13)] + ['2014']
+years.append(year_list)
 
 # entropy_rank_28_component_66_SOM_KEN_conflict
+ranks.append(28); components.append(66); countries.append(['SOM', 'KEN'])
+matched_databases.append(3)
+year_list = [str(2000 + x) for x in range(11, 16)]
+years.append(year_list)
 
 # entropy_rank_29_component_33_ETH_ERI_border_conflict
+ranks.append(29); components.append(33); countries.append(['ETH', 'ERI'])
+matched_databases.append(0)
+year_list = ['2011']
+years.append(year_list)
 
 # entropy_rank_30_component_17_ARM_AZE_conflict_and_armistice_mediated_by_RUS
 
