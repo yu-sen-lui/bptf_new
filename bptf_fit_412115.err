@@ -1,11 +1,0 @@
-  0%|          | 0/500 [00:00<?, ?it/s]  0%|          | 1/500 [03:09<26:18:02, 189.74s/it]  0%|          | 2/500 [06:20<26:18:51, 190.22s/it]  1%|          | 3/500 [09:30<26:16:28, 190.32s/it]  1%|          | 4/500 [12:40<26:10:41, 190.00s/it]  1%|          | 5/500 [15:49<26:04:39, 189.65s/it]  1%|          | 6/500 [18:58<26:01:05, 189.61s/it]  1%|▏         | 7/500 [22:08<25:57:00, 189.49s/it]  2%|▏         | 8/500 [25:17<25:53:26, 189.44s/it]  2%|▏         | 9/500 [28:26<25:49:29, 189.35s/it]  2%|▏         | 10/500 [31:36<25:48:36, 189.63s/it]  2%|▏         | 10/500 [35:25<28:55:39, 212.53s/it]
-Traceback (most recent call last):
-  File "/home/luiyusen/projects/bptf_new/fitting_tensor_factorisation_models.py", line 95, in <module>
-    bptf_5mode.fit(Y_2000_2018, max_iter = max_iter, mask=GDELT_mask, verbose=True, missing_val=1)
-  File "/home/luiyusen/projects/bptf_new/bptf/src/bptf/bptf.py", line 294, in fit
-    self._update(data, mask=mask, missing_val=missing_val, **kwargs)
-  File "/home/luiyusen/projects/bptf_new/bptf/src/bptf/bptf.py", line 268, in _update
-    assert delta >= 0.0, f'delta: {delta}'
-           ^^^^^^^^^^^^
-AssertionError: delta: -0.013459323750472955
-srun: error: i001-ds: task 0: Exited with exit code 1

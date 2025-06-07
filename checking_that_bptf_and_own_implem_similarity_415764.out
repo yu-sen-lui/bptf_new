@@ -1,4 +1,0 @@
-Running on j002-ds   at Thu May  1 07:05:46 AM CDT 2025
-SLURM_JOB_ID = 415764
-papermill checking_that_bptf_and_own_implem_similarity.ipynb checking_that_bptf_and_own_implem_similarity.ipynb --kernel python3
-Finished at Thu May  1 07:14:56 AM CDT 2025
