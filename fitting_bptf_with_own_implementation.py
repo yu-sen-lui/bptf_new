@@ -62,7 +62,7 @@ else:
 # new_data = Y.data[mask].copy()
 # Y = sparse.COO(new_coords, new_data, shape=Y.shape)
 
-n_components = 200
+n_components = 100
 max_iter = 1000
 tol = 1e-6
 device = 'cuda'
